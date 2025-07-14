@@ -3,65 +3,58 @@ use ratzilla::{
 };
 use ratatui::Frame;
 
+mod intro;
 mod displays;
 mod splash;
 mod blog;
+mod tui_helpers;
 
 use displays::Displays;
 use splash::SplashModel;
 use blog::BlogModel;
-
-pub enum AppState {
-    Splash,
-    Blog,
-    // Add more states e.g. Tools, About...
-}
+use intro::IntroModel;
 
 pub enum Msg {
     NavigateUp,
     NavigateDown,
     Select,
-    SwitchTo(AppState),
-}
-
-impl From<Displays> for AppState {
-    fn from(d: Displays) -> Self {
-        match d {
-            Displays::Blog => AppState::Blog,
-            // map others here...
-            _ => AppState::Splash,
-        }
-    }
+    SwitchTo(Displays),
 }
 
 pub struct App {
-    pub current: AppState,
+    pub current: Displays,
     splash: SplashModel,
     blog: BlogModel,
+    intro: IntroModel,
 }
 
 impl App {
     pub fn new() -> Self {
         Self {
-            current: AppState::Splash,
+            current: Displays::Intro,
+            intro: IntroModel::new(),
             splash: SplashModel::new(),
             blog: BlogModel::new(),
         }
     }
 
     pub fn update(&mut self, msg: Msg) {
+        match msg {
+            Msg::SwitchTo(s) => self.current = s,
+            _ => {},
+        }
         match self.current {
-            AppState::Splash => {
+            Displays::Splash => {
                 if let Some(m) = self.splash.update(msg) {
                     self.update(m);
                 }
             }
-            AppState::Blog => {
+            Displays::Blog => {
                 match msg {
-                    Msg::SwitchTo(s) => self.current = s,
                     _ => self.blog.update(msg),
                 }
             }
+            _ => {}
         }
     }
 /*
@@ -74,18 +67,21 @@ impl App {
 */
     pub fn render(&mut self, frame: &mut Frame) {
         match self.current {
-            AppState::Splash => self.splash.view(frame),
-            //AppState::Blog => self.blog.view(frame)
+            Displays::Intro => self.intro.view(frame),
+            Displays::Splash => self.splash.view(frame),
+            Displays::Blog => self.blog.view(frame),
             _ => {}
         } 
     }
 
-    pub fn handle_events(&self, key_event: KeyEvent) {
+    pub fn handle_events(&mut self, key_event: KeyEvent) {
         match key_event.code {
-            KeyCode::Left => {} ,
-            KeyCode::Right => {},
-            _ => {}
-        }
+            KeyCode::Up => self.update(Msg::NavigateUp),
+            KeyCode::Down => self.update(Msg::NavigateDown),
+            KeyCode::Enter => self.update(Msg::Select),
+            KeyCode::Esc => self.update(Msg::SwitchTo(Displays::Splash)),
+            _ =>  {}
+        };
     }
 
 }

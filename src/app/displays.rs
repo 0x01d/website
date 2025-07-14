@@ -6,6 +6,7 @@ pub enum Displays {
     Acknowledgements,
     Contact,
     About,
+    Intro,
 }
 
 impl Displays {
@@ -28,6 +29,7 @@ impl Displays {
             Displays::Acknowledgements => "Acknowledgements",
             Displays::Contact => "Contact",
             Displays::About => "About",
+            Displays::Intro => unreachable!("Intro is hidden"),
         }
     }
 }

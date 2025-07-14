@@ -506,6 +506,7 @@ dependencies = [
  "ratzilla",
  "tachyonfx",
  "web-sys",
+ "web-time",
 ]
 
 [[package]]

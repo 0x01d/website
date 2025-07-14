@@ -1,11 +1,39 @@
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 use crate::app::displays::Displays;
 use crate::app::Msg;
+use crate::app::tui_helpers::centered_rect;
 
+static ASCII: &'static str = 
+"
+                                 _____          
+        ______                  /\\   \\        
+       |::|   |                /::\\   \\       
+       |::|   |               /::::\\   \\      
+       |::|   |              /::::::\\   \\     
+      |::|   |             /:::/\\:::\\   \\    
+       |::|   |            /:::/  \\:::\\   \\   
+       |::|   |           /:::/    \\:::\\   \\  
+       |::|   |          /:::/     /\\:::\\   \\ 
+ ______|::|___|___ ____ /:::/     /  \\:::\\___\\
+|:::::::::::::::::|    /:::/____ /    \\:::|    |
+|:::::::::::::::::|____\\:::\\   \\    /:::|____|
+";
+/*
+ ~~~~~~|::|~~~|~~~      \:::\    \   /:::/    / 
+       |::|   |          \:::\    \ /:::/    /  
+       |::|   |           \:::\    /:::/    /   
+       |::|   |            \:::\  /:::/    /    
+       |::|   |             \:::\/:::/    /     
+       |::|   |              \::::::/    /      
+       |::|   |               \::::/    /       
+       |::|___|                \::/____/        
+        ~~                      ~~              
+";*/
 pub struct SplashModel {
+
     menu_items: Vec<Displays>,
     list_state: ListState,
 }
@@ -49,12 +77,40 @@ impl SplashModel {
             .iter()
             .map(|&d| ListItem::new(d.label()))
             .collect();
-        let area = ratatui::layout::Rect::new(0,0,80,100);
+
+        let full_area = centered_rect(60, 40, f.area());
+
+        // Draw a border around the full area
+        let bordered_block = Block::default()
+            .title("Main Area")
+            .borders(Borders::ALL);
+        f.render_widget(bordered_block.clone(), full_area);
+
+        let inner_area = bordered_block.inner(full_area);
+        let menu_height: u16 = items.len().try_into().unwrap();
+        // Split the inner area into three vertical chunks:
+        // [ ASCII Art + Title ] [ Spacer ] [ Menu ]
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(5),  // ASCII art + title
+                Constraint::Min(1),     // Spacer
+                Constraint::Length(menu_height),  // Menu height
+            ])
+            .split(inner_area);        
+
+        // Render ASCII art and title
+        let ascii_art = Paragraph::new("")
+            .block(Block::default())
+            .alignment(Alignment::Center);
+        f.render_widget(ascii_art, chunks[0]);
+
+        let menu_area = centered_rect(60, 100, chunks[2]);
 
         let list = List::new(items)
             .block(Block::default().title("Menu").borders(Borders::ALL))
             .highlight_style(Style::default().bg(Color::Blue));
 
-        f.render_stateful_widget(list, area, &mut self.list_state);
+        f.render_stateful_widget(list, menu_area, &mut self.list_state);
     }
 }
