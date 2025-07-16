@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::fs::{self};
 use glob::glob;
-use comrak::{markdown_to_html, ComrakOptions};
-use std::env;
+use std::collections::HashMap;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,39 +18,34 @@ struct BlogEntry {
     slug: String,
     tags: Vec<String>,
     date: String,
-    path: String,
 }
 
 fn main() {
-    match env::current_dir() {
-        Ok(path) => println!("Current directory: {}", path.display()),
-        Err(e) => eprintln!("Error getting current directory: {}", e),
-    }
     let mut entries = Vec::new();
+    let mut tags: HashMap<String, i32> = HashMap::new();
     for entry in glob("public/blogs/*.md").unwrap() {
         let path = entry.unwrap();
         println!("Parsing: {}", path.display());
         let content = fs::read_to_string(&path).unwrap();
 
         if let Some((fm, body)) = extract_frontmatter(&content) {
-            let html = markdown_to_html(&body, &ComrakOptions::default());
-
-            let html_path = PathBuf::from("public/blogs").join(format!("{}.html", fm.slug));
-            fs::write(&html_path, html).unwrap();
-
             let blog_entry = BlogEntry {
                 title: fm.title,
                 slug: fm.slug.clone(),
-                tags: fm.tags,
+                tags: fm.tags.clone(),
                 date: fm.date,
-                path: format!("/blogs/{}.html", fm.slug),
             };
+            for tag in fm.tags {
+                *tags.entry(tag).or_insert(0) += 1;
+            }
             entries.push(blog_entry);
         }
     }
 
-    let json = serde_json::to_string_pretty(&entries).unwrap();
-    fs::write("public/blogs/index.json", json.as_bytes()).unwrap();
+    let json_entries = serde_json::to_string_pretty(&entries).unwrap();
+    let json_tags = serde_json::to_string_pretty(&tags).unwrap();
+    fs::write("public/blogs/index.json", json_entries.as_bytes()).unwrap();
+    fs::write("public/blogs/tags.json", json_tags.as_bytes()).unwrap();
 }
 
 fn extract_frontmatter(content: &str) -> Option<(FrontMatter, String)> {

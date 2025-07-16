@@ -40,8 +40,16 @@ impl App {
 
     pub fn update(&mut self, msg: Msg) {
         match msg {
-            Msg::SwitchTo(s) => self.current = s,
-            _ => {},
+            Msg::SwitchTo(s) => {
+                self.current = s;
+                match s {
+                    Displays::Blog => {
+                        self.blog.fetch_tags_and_index();
+                    },
+                    _ => {}
+                }
+            }
+            _ => {}
         }
         match self.current {
             Displays::Splash => {

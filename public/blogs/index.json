@@ -7,7 +7,17 @@
       "rust",
       "ratzilla"
     ],
-    "date": "1337",
-    "path": "/blogs/my-first-post.html"
+    "date": "1337"
+  },
+  {
+    "title": "My First Post",
+    "slug": "my-first-post",
+    "tags": [
+      "wasm",
+      "rust",
+      "ratzilla",
+      "second"
+    ],
+    "date": "1337"
   }
 ]
