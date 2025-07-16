@@ -5,35 +5,10 @@ use ratatui::{
 use crate::app::displays::Displays;
 use crate::app::Msg;
 use crate::app::tui_helpers::centered_rect;
+use crate::app::intro::IntroModel;
 
-static ASCII: &'static str = 
-"
-                                 _____          
-        ______                  /\\   \\        
-       |::|   |                /::\\   \\       
-       |::|   |               /::::\\   \\      
-       |::|   |              /::::::\\   \\     
-      |::|   |             /:::/\\:::\\   \\    
-       |::|   |            /:::/  \\:::\\   \\   
-       |::|   |           /:::/    \\:::\\   \\  
-       |::|   |          /:::/     /\\:::\\   \\ 
- ______|::|___|___ ____ /:::/     /  \\:::\\___\\
-|:::::::::::::::::|    /:::/____ /    \\:::|    |
-|:::::::::::::::::|____\\:::\\   \\    /:::|____|
-";
-/*
- ~~~~~~|::|~~~|~~~      \:::\    \   /:::/    / 
-       |::|   |          \:::\    \ /:::/    /  
-       |::|   |           \:::\    /:::/    /   
-       |::|   |            \:::\  /:::/    /    
-       |::|   |             \:::\/:::/    /     
-       |::|   |              \::::::/    /      
-       |::|   |               \::::/    /       
-       |::|___|                \::/____/        
-        ~~                      ~~              
-";*/
 pub struct SplashModel {
-
+    intro: IntroModel,
     menu_items: Vec<Displays>,
     list_state: ListState,
 }
@@ -44,6 +19,7 @@ impl SplashModel {
         let mut state = ListState::default();
         state.select(Some(0));
         Self {
+            intro: IntroModel::new(),
             menu_items: items,
             list_state: state,
         }
@@ -78,34 +54,20 @@ impl SplashModel {
             .map(|&d| ListItem::new(d.label()))
             .collect();
 
-        let full_area = centered_rect(60, 40, f.area());
-
-        // Draw a border around the full area
-        let bordered_block = Block::default()
-            .title("Main Area")
-            .borders(Borders::ALL);
-        f.render_widget(bordered_block.clone(), full_area);
-
-        let inner_area = bordered_block.inner(full_area);
-        let menu_height: u16 = items.len().try_into().unwrap();
+        let mut menu_height: u16 = items.len().try_into().unwrap();
+        menu_height += 2;
         // Split the inner area into three vertical chunks:
         // [ ASCII Art + Title ] [ Spacer ] [ Menu ]
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(5),  // ASCII art + title
-                Constraint::Min(1),     // Spacer
+                Constraint::Length(21),  // ASCII art + title
+                Constraint::Length(1),     // Spacer
                 Constraint::Length(menu_height),  // Menu height
             ])
-            .split(inner_area);        
-
-        // Render ASCII art and title
-        let ascii_art = Paragraph::new("")
-            .block(Block::default())
-            .alignment(Alignment::Center);
-        f.render_widget(ascii_art, chunks[0]);
-
-        let menu_area = centered_rect(60, 100, chunks[2]);
+            .split(f.area());        
+        self.intro.view(f, chunks[0]);
+        let menu_area = centered_rect(23, 100, chunks[2]);
 
         let list = List::new(items)
             .block(Block::default().title("Menu").borders(Borders::ALL))

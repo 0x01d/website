@@ -31,7 +31,7 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         Self {
-            current: Displays::Intro,
+            current: Displays::Splash,
             intro: IntroModel::new(),
             splash: SplashModel::new(),
             blog: BlogModel::new(),
@@ -67,7 +67,6 @@ impl App {
 */
     pub fn render(&mut self, frame: &mut Frame) {
         match self.current {
-            Displays::Intro => self.intro.view(frame),
             Displays::Splash => self.splash.view(frame),
             Displays::Blog => self.blog.view(frame),
             _ => {}

@@ -63,17 +63,15 @@ impl IntroModel {
     pub fn update(&mut self, _msg: crate::app::Msg) {
     }
 
-    pub fn view(&mut self, f: &mut Frame) {
+    pub fn view(&mut self, f: &mut Frame, area: Rect) {
         let elapsed = self.last_frame.elapsed();
         self.last_frame = Instant::now();
 
         let p = Paragraph::new(INTRO_ASCII)
             .alignment(Alignment::Center);
 
-        f.render_widget(p, f.area());
-        let area = f.area();
+        f.render_widget(p, area);
 
         self.fx_manager.process_effects(elapsed.into(), f.buffer_mut(), area);
     }
 }
-

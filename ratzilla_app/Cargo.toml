@@ -1,0 +1,25 @@
+[package]
+name = "rasm"
+version = "0.1.0"
+authors = ["0x01d <0x@01d.gg>"]
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+ratatui = { version = "0.29.0", default-features = false, features = ["unstable-widget-ref"] }
+color-eyre = "0.6.3"
+ratzilla = "0.1"
+tachyonfx = { version = "0.13.0", default-features = false, features = ["web-time"] }
+web-time = "1.0"
+web-sys = { version = "0.3.77",features = [
+    "Window",
+    "Navigator",
+    "Clipboard",
+    "Geolocation",
+    "Permissions",
+    "RtcPeerConnection",
+    "console",
+    "BatteryManager",
+    "MediaDevices"
+]} 
+console_error_panic_hook = "0.1.7"

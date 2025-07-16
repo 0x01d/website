@@ -1,0 +1,13 @@
+[[hooks]]
+stage = "pre_build"
+command = "cargo"
+command_arguments = ["run", "-p", "blog_gen"]
+
+[build]
+target = "ratzilla_app/index.html"
+dist = "dist"
+public_url = "/"
+filehash = true
+inject_scripts = true
+offline = false 
+minify = "always"
