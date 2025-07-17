@@ -2,12 +2,16 @@ use ratzilla::{
     event::{KeyCode, KeyEvent},
 };
 use ratatui::Frame;
+use web_sys::{Window, PopStateEvent, Event};
+use wasm_bindgen::JsValue;
+use gloo::events::EventListener;
 
 mod intro;
 mod displays;
 mod splash;
 mod blog;
 mod tui_helpers;
+pub mod popstate_listener;
 
 use displays::Displays;
 use splash::SplashModel;
@@ -26,15 +30,21 @@ pub struct App {
     splash: SplashModel,
     blog: BlogModel,
     intro: IntroModel,
+    window: Window,
+    pub listener: Option<EventListener>
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(path: String) -> Self {
+        let current = Displays::from_path(&path);
+        let window = web_sys::window().expect("No global 'window' exists");
         Self {
-            current: Displays::Splash,
+            current,
             intro: IntroModel::new(),
             splash: SplashModel::new(),
             blog: BlogModel::new(),
+            window,
+            listener: None,
         }
     }
 
@@ -42,6 +52,9 @@ impl App {
         match msg {
             Msg::SwitchTo(s) => {
                 self.current = s;
+                if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
+                    let _ = history.push_state_with_url(&JsValue::NULL, "", Some(s.path()));
+                }
                 match s {
                     Displays::Blog => {
                         self.blog.fetch_tags_and_index();
@@ -65,14 +78,14 @@ impl App {
             _ => {}
         }
     }
-/*
-    pub fn view<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
-        match self.current {
-            AppState::Splash => self.splash.view(f, area),
-            AppState::Blog => self.blog.view(f, area),
-        }
-    }
-*/
+    /*
+       pub fn view<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+       match self.current {
+       AppState::Splash => self.splash.view(f, area),
+       AppState::Blog => self.blog.view(f, area),
+       }
+       }
+       */
     pub fn render(&mut self, frame: &mut Frame) {
         match self.current {
             Displays::Splash => self.splash.view(frame),
@@ -91,4 +104,12 @@ impl App {
         };
     }
 
+    pub fn handle_popstate(&mut self, event: Event) {
+        web_sys::console::log_1(event.as_ref());
+        if let Some(path) = self.window.location().pathname().ok() {
+            let current = Displays::from_path(&path);
+            self.update(Msg::SwitchTo(current));
+        }
+        //window.
+    }
 }

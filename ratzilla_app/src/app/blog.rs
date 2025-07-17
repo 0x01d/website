@@ -5,6 +5,9 @@ use ratatui::{
     Frame,
 };
 use wasm_bindgen_futures::spawn_local;
+use web_sys::{Request, RequestInit, RequestMode, Response};
+use js_sys::Promise;
+use wasm_bindgen::JsCast;
 
 
 struct Tag {
@@ -64,8 +67,17 @@ impl BlogModel {
         f.render_stateful_widget(list, chunks[0], &mut self.tag_list_state);
     }
 
-    pub fn fetch_tags_and_index() {
-        spawn_local(async move {});
+    pub fn fetch_tags_and_index(&self) {
+        spawn_local(async move {
+            let mut opts = RequestInit::new();
+            opts.method("GET");
+            opts.mode(RequestMode::Cors);
+
+            //let request = Request::new_with_str_and_init("
+
+
+
+        });
 
     }
 }
