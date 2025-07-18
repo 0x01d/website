@@ -25,25 +25,29 @@ impl SplashModel {
         }
     }
 
-    pub fn update(&mut self, msg: Msg) -> Option<Msg> {
+    pub fn update(&mut self, msg: Msg) -> Vec<Msg> {
         let current = self.list_state.selected().unwrap_or(0);
+        let mut msg_list: Vec<Msg> = Vec::new();
         match msg {
             Msg::NavigateUp => {
                 let new = current.saturating_sub(1);
                 self.list_state.select(Some(new));
-                None
+                msg_list
             }
             Msg::NavigateDown => {
                 let max = self.menu_items.len().saturating_sub(1);
                 let new = (current + 1).min(max);
                 self.list_state.select(Some(new));
-                None
+                msg_list
             }
             Msg::Select => {
                 let sel = self.menu_items[current];
-                return Some(Msg::SwitchTo(sel.into()));
+                msg_list.push(Msg::SwitchTo(sel.into()));
+                msg_list.push(Msg::PushStateFromDisplay(sel.into()));
+
+                msg_list
             }
-            _ => None,
+            _ => msg_list
         }
     }
 

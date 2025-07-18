@@ -23,6 +23,7 @@ pub enum Msg {
     NavigateDown,
     Select,
     SwitchTo(Displays),
+    PushStateFromDisplay(Displays),
 }
 
 pub struct App {
@@ -52,9 +53,6 @@ impl App {
         match msg {
             Msg::SwitchTo(s) => {
                 self.current = s;
-                if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
-                    let _ = history.push_state_with_url(&JsValue::NULL, "", Some(s.path()));
-                }
                 match s {
                     Displays::Blog => {
                         self.blog.fetch_tags_and_index();
@@ -62,12 +60,17 @@ impl App {
                     _ => {}
                 }
             }
+            Msg::PushStateFromDisplay(s) => {
+                if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
+                    let _ = history.push_state_with_url(&JsValue::NULL, "", Some(s.path()));
+                }
+            }
             _ => {}
         }
         match self.current {
             Displays::Splash => {
-                if let Some(m) = self.splash.update(msg) {
-                    self.update(m);
+                for msg in self.splash.update(msg) {
+                    self.update(msg);
                 }
             }
             Displays::Blog => {
@@ -110,6 +113,5 @@ impl App {
             let current = Displays::from_path(&path);
             self.update(Msg::SwitchTo(current));
         }
-        //window.
     }
 }
