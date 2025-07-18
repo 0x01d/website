@@ -1,6 +1,6 @@
 {
-  "wasm": 2,
   "ratzilla": 2,
+  "wasm": 2,
   "rust": 2,
   "second": 1
 }

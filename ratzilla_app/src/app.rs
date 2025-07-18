@@ -53,12 +53,6 @@ impl App {
         match msg {
             Msg::SwitchTo(s) => {
                 self.current = s;
-                match s {
-                    Displays::Blog => {
-                        self.blog.fetch_tags_and_index();
-                    },
-                    _ => {}
-                }
             }
             Msg::PushStateFromDisplay(s) => {
                 if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {

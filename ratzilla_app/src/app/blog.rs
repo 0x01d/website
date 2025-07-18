@@ -9,26 +9,20 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 use js_sys::Promise;
 use wasm_bindgen::JsCast;
 
-
-struct Tag {
-    name: String,
-    count: u32,
-}
-
 enum Pane {
     Post,
     List
 }
 
 pub struct BlogModel {
-    tag_list: Vec<Tag>,
+    tag_list: Option<HashMap<&str, u32>>,
     tag_list_state: ListState,
     active_pane: Pane,
 }
 
 impl BlogModel {
     pub fn new() -> Self {
-        let tag_list = Vec::new();
+        let tag_list = None;
         let mut tag_list_state = ListState::default();
         tag_list_state.select(Some(0));
         Self {
@@ -47,8 +41,13 @@ impl BlogModel {
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(20), Constraint::Percentage(80)].as_ref())
             .split(f.area());
+        let tags = if let Some(tags) = self.tag_list.clone() {
+            tags
+        } else {
+            Vec::new()
+        };
 
-        let total_count: u32 = self.tag_list.iter().map(|tag| tag.count).sum();
+        let total_count: u32 = tags.iter().map(|tag| tag.count).sum();
 
         let mut items: Vec<ListItem> = Vec::new();
 
@@ -56,7 +55,7 @@ impl BlogModel {
         items.push(ListItem::new(format!("All ({})", total_count)));
 
         // Other items: Each tag with its count
-        items.extend(self.tag_list.iter().map(|tag| {
+        items.extend(tags.iter().map(|tag| {
             ListItem::new(format!("{} ({})", tag.name, tag.count))
         }));        
 
@@ -67,17 +66,30 @@ impl BlogModel {
         f.render_stateful_widget(list, chunks[0], &mut self.tag_list_state);
     }
 
-    pub fn fetch_tags_and_index(&self) {
-        spawn_local(async move {
-            let mut opts = RequestInit::new();
-            opts.method("GET");
-            opts.mode(RequestMode::Cors);
+    pub fn fetch_tags(&self) -> Vec<Tag> {
+        spawn_local(async {
+            let url = "/public/blogs/tags.json";
 
-            //let request = Request::new_with_str_and_init("
-
-
-
+            match Request::get(url).send().await {
+                Ok(response) => {
+                    if response.ok() {
+                        match response.text().await {
+                            Ok(text) => {
+                                console::log_1(&format!("Fetched tags: {}", text).into());
+                                // Optionally parse JSON here
+                            }
+                            Err(err) => {
+                                console::error_1(&format!("Failed to read response body: {:?}", err).into());
+                            }
+                        }
+                    } else {
+                        console::error_1(&format!("Request failed: {}", response.status()).into());
+                    }
+                }
+                Err(err) => {
+                    console::error_1(&format!("Fetch error: {:?}", err).into());
+                }
+            }
         });
-
     }
 }
