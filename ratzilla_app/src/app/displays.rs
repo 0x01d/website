@@ -51,7 +51,7 @@ impl Displays {
     /// Get URL path for this display
     pub fn path(self) -> &'static str {
         match self {
-            Displays::Splash => "/splash",
+            Displays::Splash => "/",
             Displays::Intro => "/intro",
             Displays::Blog => "/blog",
             Displays::Tools => "/tools",

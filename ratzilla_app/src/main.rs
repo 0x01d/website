@@ -4,6 +4,8 @@ use gloo::events::EventListener;
 
 mod app;
 
+use crate::app::Msg;
+
 use ratatui::{
     Terminal,
 };
@@ -12,7 +14,6 @@ use ratzilla::{
     DomBackend, WebRenderer,
 };
 
-use crate::app::popstate_listener::setup_popstate_listener;
 
 fn main() -> io::Result<()> {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -22,7 +23,9 @@ fn main() -> io::Result<()> {
     let window = window().expect("No window");
     let path = window.location().pathname().expect("No path"); 
 
-    let app = Rc::new(RefCell::new(app::App::new(path)));
+    let (tx, rx) = flume::unbounded::<Msg>();
+
+    let app = Rc::new(RefCell::new(app::App::new(path, tx.clone(), rx.clone())));
 
     let popstate_clone = Rc::clone(&app);
 

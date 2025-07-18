@@ -17,6 +17,7 @@ use displays::Displays;
 use splash::SplashModel;
 use blog::BlogModel;
 use intro::IntroModel;
+use crate::app::blog::Tag;
 
 pub enum Msg {
     NavigateUp,
@@ -24,6 +25,7 @@ pub enum Msg {
     Select,
     SwitchTo(Displays),
     PushStateFromDisplay(Displays),
+    UpdateBlogTags(Vec<blog::Tag>),
 }
 
 pub struct App {
@@ -32,20 +34,24 @@ pub struct App {
     blog: BlogModel,
     intro: IntroModel,
     window: Window,
-    pub listener: Option<EventListener>
+    pub listener: Option<EventListener>,
+    tx: flume::Sender<Msg>,
+    rx: flume::Receiver<Msg>,
 }
 
 impl App {
-    pub fn new(path: String) -> Self {
+    pub fn new(path: String, tx: flume::Sender<Msg>, rx: flume::Receiver<Msg>) -> Self {
         let current = Displays::from_path(&path);
         let window = web_sys::window().expect("No global 'window' exists");
         Self {
             current,
             intro: IntroModel::new(),
             splash: SplashModel::new(),
-            blog: BlogModel::new(),
+            blog: BlogModel::new(tx.clone(), rx.clone()),
             window,
             listener: None,
+            rx,
+            tx,
         }
     }
 
@@ -53,11 +59,17 @@ impl App {
         match msg {
             Msg::SwitchTo(s) => {
                 self.current = s;
+                return
             }
             Msg::PushStateFromDisplay(s) => {
                 if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
                     let _ = history.push_state_with_url(&JsValue::NULL, "", Some(s.path()));
                 }
+                return
+            }
+            Msg::UpdateBlogTags(ref tags) => {
+                self.blog.tag_list = tags.to_vec();
+                return
             }
             _ => {}
         }
@@ -75,20 +87,16 @@ impl App {
             _ => {}
         }
     }
-    /*
-       pub fn view<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
-       match self.current {
-       AppState::Splash => self.splash.view(f, area),
-       AppState::Blog => self.blog.view(f, area),
-       }
-       }
-       */
+
     pub fn render(&mut self, frame: &mut Frame) {
         match self.current {
             Displays::Splash => self.splash.view(frame),
             Displays::Blog => self.blog.view(frame),
             _ => {}
         } 
+        if let Some(msg) = self.rx.try_recv().ok() {
+            self.update(msg);
+        }
     }
 
     pub fn handle_events(&mut self, key_event: KeyEvent) {
@@ -96,11 +104,15 @@ impl App {
             KeyCode::Up => self.update(Msg::NavigateUp),
             KeyCode::Down => self.update(Msg::NavigateDown),
             KeyCode::Enter => self.update(Msg::Select),
-            KeyCode::Esc => self.update(Msg::SwitchTo(Displays::Splash)),
+            KeyCode::Esc =>  {
+                self.update(Msg::SwitchTo(Displays::Splash));
+                self.update(Msg::PushStateFromDisplay(Displays::Splash));
+            }
             _ =>  {}
         };
     }
 
+    //TODO: move out of app
     pub fn handle_popstate(&mut self, event: Event) {
         web_sys::console::log_1(event.as_ref());
         if let Some(path) = self.window.location().pathname().ok() {
