@@ -17,15 +17,17 @@ use displays::Displays;
 use splash::SplashModel;
 use blog::BlogModel;
 use intro::IntroModel;
-use crate::app::blog::Tag;
 
 pub enum Msg {
     NavigateUp,
     NavigateDown,
+    NavigateLeft,
+    NavigateRight,
     Select,
     SwitchTo(Displays),
     PushStateFromDisplay(Displays),
     UpdateBlogTags(Vec<blog::Tag>),
+    UpdateBlogIndex(Vec<blog::BlogEntry>),
 }
 
 pub struct App {
@@ -69,6 +71,12 @@ impl App {
             }
             Msg::UpdateBlogTags(ref tags) => {
                 self.blog.tag_list = tags.to_vec();
+                self.blog.tag_list_state.select(Some(0));
+                return
+            }
+            Msg::UpdateBlogIndex(ref index) => {
+                self.blog.blog_list = index.to_vec();
+                self.blog.blog_list_state.select(Some(0));
                 return
             }
             _ => {}
@@ -103,6 +111,8 @@ impl App {
         match key_event.code {
             KeyCode::Up => self.update(Msg::NavigateUp),
             KeyCode::Down => self.update(Msg::NavigateDown),
+            KeyCode::Left => self.update(Msg::NavigateLeft),
+            KeyCode::Right => self.update(Msg::NavigateRight),
             KeyCode::Enter => self.update(Msg::Select),
             KeyCode::Esc =>  {
                 self.update(Msg::SwitchTo(Displays::Splash));

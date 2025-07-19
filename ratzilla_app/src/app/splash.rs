@@ -75,7 +75,7 @@ impl SplashModel {
 
         let list = List::new(items)
             .block(Block::default().title("Menu").borders(Borders::ALL))
-            .highlight_style(Style::default().bg(Color::Blue));
+            .highlight_style(Style::default().bg(Color::Yellow));
 
         f.render_stateful_widget(list, menu_area, &mut self.list_state);
     }
