@@ -28,6 +28,7 @@ pub enum Msg {
     PushStateFromDisplay(Displays),
     UpdateBlogTags(Vec<blog::Tag>),
     UpdateBlogIndex(Vec<blog::BlogEntry>),
+    ParseBlogText(String),
 }
 
 pub struct App {
@@ -77,6 +78,10 @@ impl App {
             Msg::UpdateBlogIndex(ref index) => {
                 self.blog.blog_list = index.to_vec();
                 self.blog.blog_list_state.select(Some(0));
+                return
+            }
+            Msg::ParseBlogText(ref text) => {
+                self.blog.parse_blog_text(text.to_string()); 
                 return
             }
             _ => {}

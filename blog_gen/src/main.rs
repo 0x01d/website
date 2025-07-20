@@ -2,14 +2,14 @@ use serde::{Deserialize, Serialize};
 use std::fs::{self};
 use glob::glob;
 use std::collections::HashMap;
+use chrono::NaiveDate;
 
 
 #[derive(Debug, Serialize, Deserialize)]
 struct FrontMatter {
     title: String,
-    slug: String,
     tags: Vec<String>,
-    date: String,
+    date: NaiveDate,
 }
 
 #[derive(Debug, Serialize)]
@@ -17,21 +17,29 @@ struct BlogEntry {
     title: String,
     slug: String,
     tags: Vec<String>,
-    date: String,
+    date: NaiveDate,
+}
+
+#[derive(Debug, Serialize)]
+struct Tag {
+    name: String,
+    count: i32,
 }
 
 fn main() {
     let mut entries = Vec::new();
     let mut tags: HashMap<String, i32> = HashMap::new();
-    for entry in glob("public/blogs/*.md").unwrap() {
+    tags.insert("All".to_string(), 0);
+    for entry in glob("blogs/*.md").unwrap() {
         let path = entry.unwrap();
+        let slug = path.file_name().unwrap().to_string_lossy().into_owned();
         println!("Parsing: {}", path.display());
         let content = fs::read_to_string(&path).unwrap();
 
         if let Some((fm, body)) = extract_frontmatter(&content) {
             let blog_entry = BlogEntry {
                 title: fm.title,
-                slug: fm.slug.clone(),
+                slug: slug.clone(),
                 tags: fm.tags.clone(),
                 date: fm.date,
             };
@@ -39,11 +47,27 @@ fn main() {
                 *tags.entry(tag).or_insert(0) += 1;
             }
             entries.push(blog_entry);
+            *tags.entry("All".to_string()).or_insert(0) += 1;
+            fs::write(format!("public/blogs/{}", slug), body.as_bytes()).unwrap();
         }
     }
 
+    let mut tags_vec = Vec::new();
+
+    if let Some(count) = tags.remove("All") {
+        tags_vec.push(Tag {
+            name: "All".to_string(),
+            count,
+        });
+    }
+
+    for (name, count) in tags {
+        tags_vec.push(Tag { name, count });
+    }
+
+
     let json_entries = serde_json::to_string_pretty(&entries).unwrap();
-    let json_tags = serde_json::to_string_pretty(&tags).unwrap();
+    let json_tags = serde_json::to_string_pretty(&tags_vec).unwrap();
     fs::write("public/blogs/index.json", json_entries.as_bytes()).unwrap();
     fs::write("public/blogs/tags.json", json_tags.as_bytes()).unwrap();
 }

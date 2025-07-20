@@ -1,9 +1,3 @@
----
-title: "My First Post"
-slug: "my-first-post"
-tags: ["wasm", "rust", "ratzilla", "second"]
-date: "1337"
----
 
 # My First Post
 

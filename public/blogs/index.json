@@ -1,23 +1,23 @@
 [
   {
     "title": "My First Post",
-    "slug": "my-first-post",
+    "slug": "my-first-post.md",
     "tags": [
       "wasm",
       "rust",
       "ratzilla"
     ],
-    "date": "1337"
+    "date": "1337-07-21"
   },
   {
-    "title": "My First Post",
-    "slug": "my-first-post",
+    "title": "My Second Post",
+    "slug": "my-second-post.md",
     "tags": [
       "wasm",
       "rust",
       "ratzilla",
       "second"
     ],
-    "date": "1337"
+    "date": "2025-07-21"
   }
 ]

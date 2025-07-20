@@ -1,13 +1,19 @@
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Paragraph, ListState, ListItem, List},
+    widgets::{Block, Borders, Paragraph, ListState, ListItem, List, Wrap, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    text::Text,
     layout::Rect,
     Frame,
 };
 use wasm_bindgen_futures::spawn_local;
 use serde::{Deserialize, Serialize};
 use gloo_net::http::Request;
+use chrono::NaiveDate;
 use web_sys::console;
+use syntect::parsing::SyntaxSet;
+use syntect::highlighting::{ThemeSet, Style as SynStyle};
+use syntect::easy::HighlightLines;
+use syntect::util::LinesWithEndings;
 
 use crate::app::Msg;
 
@@ -22,7 +28,7 @@ pub struct BlogEntry {
     title: String,
     slug: String,
     tags: Vec<String>,
-    date: String,
+    date: NaiveDate,
 }
 
 enum Pane {
@@ -39,6 +45,7 @@ pub struct BlogModel {
     active_pane: Pane,
     tx: flume::Sender<Msg>,
     rx: flume::Receiver<Msg>,
+    loaded_blog: Option<Text<'static>>,
 }
 
 impl BlogModel {
@@ -54,6 +61,7 @@ impl BlogModel {
             tag_list_state,
             blog_list_state,
             active_pane: Pane::Post,
+            loaded_blog: None,
             tx,
             rx,
         }
@@ -70,7 +78,6 @@ impl BlogModel {
     pub fn update(&mut self, msg: crate::app::Msg) {
         match self.active_pane {
             Pane::List => {
-                console::log_1(&format!("Tag window selected").into());
                 let current = self.tag_list_state.selected().unwrap_or(0);
                 match msg {
                     Msg::NavigateUp => {
@@ -97,22 +104,20 @@ impl BlogModel {
                 }
             }
             Pane::Post => {
-                console::log_1(&format!("Blog window selected").into());
                 let current = self.blog_list_state.selected().unwrap_or(0);
                 match msg {
                     Msg::NavigateUp => {
                         let new = current.saturating_sub(1);
                         self.blog_list_state.select(Some(new));
-                        console::log_1(&format!("{}", new).into());
                     }
                     Msg::NavigateDown => {
                         let max = self.blog_list.len().saturating_sub(1);
                         let new = (current + 1).min(max);
-                        console::log_1(&format!("{}", new).into());
                         self.blog_list_state.select(Some(new));
                     }
                     Msg::Select => {
-                        //let sel = self.menu_items[current];
+                        let sel = &self.blog_list[current];
+                        Self::fetch_blog(sel.slug.clone(), self.tx.clone());
 
                     }
                     Msg::NavigateLeft => {
@@ -151,15 +156,39 @@ impl BlogModel {
             .block(Block::default()
                 .title("Tags")
                 .borders(Borders::ALL)
-                .border_style( Style::default().fg(if list_active {Color::Yellow} else { Color::Reset }))
+                .border_style( Style::default()
+                    .fg(if list_active {Color::Yellow} else { Color::Reset })
+                )
             )
-            .highlight_style(Style::default().bg(Color::Yellow));
+            .highlight_style(Style::default().bg(Color::Yellow).fg(Color::Black));
 
         let mut blog_entries: Vec::<ListItem> = Vec::new();
 
         blog_entries.extend(self.blog_list.iter().map(|blog| {
-            ListItem::new(format!("{} [{}]", blog.title, blog.date))
-        })); 
+            let title_span = Span::styled(&blog.title, Style::default().fg(Color::White));
+            let date_span = Span::styled(format!(" - [{}] - ", blog.date), Style::default().fg(Color::White));
+
+            // Tags with background, spaces without
+            let mut tag_spans: Vec<Span> = Vec::new();
+            for (i, tag) in blog.tags.iter().enumerate() {
+                tag_spans.push(Span::styled(
+                        format!("#{}", tag),
+                        Style::default()
+                        .fg(Color::Cyan)
+                        //.bg(),
+                ));
+
+                // Add raw unstyled space *after* each tag except the last
+                if i < blog.tags.len() - 1 {
+                    tag_spans.push(Span::raw(" "));
+                }
+            }
+
+            let mut spans = vec![title_span, date_span];
+            spans.extend(tag_spans);
+
+            ListItem::new(Line::from(spans))
+        }));
 
         let blog_list = List::new(blog_entries)
             .block(Block::default()
@@ -167,12 +196,42 @@ impl BlogModel {
                 .borders(Borders::ALL)
                 .border_style( Style::default().fg(if !list_active {Color::Yellow} else { Color::Reset }))
             )
-            .highlight_style(Style::default().bg(Color::Yellow));
+            .highlight_style(Style::default().bg(Color::Yellow).fg(Color::Black));
 
+
+        if let Some(blog) = &self.loaded_blog {
+            let vertical_scroll = 0;
+            let blog_paragraph = Paragraph::new(blog.to_owned())
+                .scroll((vertical_scroll as u16, 0))
+                .block(Block::default()
+                    .title("Tags")
+                    .borders(Borders::ALL)
+                    .border_style( Style::default().fg(if !list_active {Color::Yellow} else { Color::Reset }))
+                );
+            let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(Some("↑"))
+                .end_symbol(Some("↓"));
+        }
         f.render_stateful_widget(blog_list, chunks[0], &mut self.blog_list_state);
         f.render_stateful_widget(list, chunks[1], &mut self.tag_list_state);
     }
 
+    pub fn parse_blog_text(&mut self, content: String) {
+        use pulldown_cmark::{Event, Parser, TextMergeStream};
+
+        let iterator = TextMergeStream::new(Parser::new(&content));
+
+        let mut content_styled: Text = Text::default();
+
+        for event in iterator {
+            match event {
+                Event::Text(text) => content_styled.extend(Text::from(text.to_string())),
+                _ => {}
+            }
+        }       
+
+        self.loaded_blog = Some(content_styled);
+    }
     pub fn fetch_tags(&mut self) {
         let tx_clone = self.tx.clone();
         spawn_local(async move{
@@ -185,9 +244,7 @@ impl BlogModel {
                             Ok(text) => {
                                 console::log_1(&format!("Fetched tags: {}", text).into());
                                 let tag_list: Option<Vec<Tag>> = serde_json::from_str(&text.to_string()).ok();
-                                if let Some(mut tags) = tag_list {
-                                    let count: u32 = tags.iter().map(|tag| tag.count).sum();
-                                    tags.insert(0, Tag {name: "All".to_string(), count });
+                                if let Some(tags) = tag_list {
                                     let _ = tx_clone.try_send(Msg::UpdateBlogTags(tags));
                                 }
 
@@ -205,7 +262,6 @@ impl BlogModel {
                 }
             }
         });
-
     }
 
     pub fn fetch_index(&mut self) {
@@ -220,7 +276,7 @@ impl BlogModel {
                             Ok(text) => {
                                 console::log_1(&format!("Fetched index: {}", text).into());
                                 let blog_list: Option<Vec<BlogEntry>> = serde_json::from_str(&text.to_string()).ok();
-                                if let Some(mut blogs) = blog_list {
+                                if let Some(blogs) = blog_list {
                                     let _ = tx_clone.try_send(Msg::UpdateBlogIndex(blogs));
                                 }
 
@@ -240,4 +296,32 @@ impl BlogModel {
         });
 
     }
+
+    pub fn fetch_blog(slug: String, tx: flume::Sender<Msg>) {
+        spawn_local(async move{
+            let url = format!("/public/blogs/{}", slug);
+
+            match Request::get(&url).send().await {
+                Ok(response) => {
+                    if response.ok() {
+                        match response.text().await {
+                            Ok(text) => {
+                                let _ = tx.try_send(Msg::ParseBlogText(text));
+                            }
+                            Err(err) => {
+                                console::error_1(&format!("Failed to read response body: {:?}", err).into());
+                            }
+                        }
+                    } else {
+                        console::error_1(&format!("Request failed: {}", response.status()).into());
+                    }
+                }
+                Err(err) => {
+                    console::error_1(&format!("Fetch error: {:?}", err).into());
+                }
+            }
+        });
+
+    }
 }
+

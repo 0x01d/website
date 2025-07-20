@@ -1,3 +1,8 @@
+---
+title: "My Second Post"
+tags: ["wasm", "rust", "ratzilla", "second"]
+date: 2025-7-21
+---
 
 # My First Post
 
