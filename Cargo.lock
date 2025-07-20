@@ -375,9 +375,9 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
 name = "colorsys"
-version = "0.6.7"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54261aba646433cb567ec89844be4c4825ca92a4f8afba52fc4dd88436e31bbd"
+checksum = "aee37dd2dc25d67ce9bca2709c384843c46d1582158ed5e2483d52b6da30e7d8"
 
 [[package]]
 name = "compact_str"
@@ -1669,9 +1669,9 @@ dependencies = [
 
 [[package]]
 name = "tachyonfx"
-version = "0.13.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e12f441a3aa6821a20ebc350e51139806c875551910e8ac067f663e4ab28e82"
+checksum = "2546665ffa82d81a5dd84c32041d417ad8f52f96e2c3d1c67cdf3f64540fe06f"
 dependencies = [
  "bon",
  "colorsys",
@@ -1679,6 +1679,7 @@ dependencies = [
  "ratatui",
  "simple-easing",
  "thiserror 2.0.12",
+ "unicode-width 0.2.0",
  "web-time",
 ]
 
