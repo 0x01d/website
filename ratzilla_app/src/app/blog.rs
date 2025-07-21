@@ -102,7 +102,12 @@ impl BlogModel {
                         self.active_pane = Pane::Post;
                     }
                     Msg::Select => {
-                        //let sel = self.menu_items[current];
+                        let sel = &self.tag_list[current];
+                        let path = format!("/blog/#{}", &sel.name);
+                        if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
+                            let _ = history.push_state_with_url(&JsValue::NULL, "", Some(&path));
+                        }
+                        //Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
                     }
                     _ => {}
                 }
@@ -132,9 +137,6 @@ impl BlogModel {
                             let _ = history.push_state_with_url(&JsValue::NULL, "", Some(&path));
                         }
                         Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
-
-                        //Self::fetch_blog(sel.slug.clone(), self.tx.clone());
-
                     }
                     Msg::LoadSubPath(ref path) => {
                         if let Some(slug) = path.split('/').next() {
@@ -219,14 +221,17 @@ impl BlogModel {
             let blog_paragraph = Paragraph::new(blog.to_owned())
                 .scroll((self.vertical_scroll as u16, 0))
                 .block(Block::default()
-                    .title("Tags")
+                    .title("Post")
                     .borders(Borders::ALL)
                     .border_style( Style::default().fg(if !list_active {Color::Yellow} else { Color::Reset }))
                 );
             let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
                 .begin_symbol(Some("↑"))
-                .end_symbol(Some("↓"));
-            f.render_widget(blog_paragraph, f.area());
+                .end_symbol(Some("↓"))
+                .style(Style::default().fg(Color::Yellow));
+
+            f.render_widget(blog_paragraph, chunks[0]);
+
             if let Some(mut bar) = self.scrollbar_state {
                 f.render_stateful_widget(scrollbar, chunks[0].inner(Margin {vertical:1, horizontal:1}), &mut bar);
             }

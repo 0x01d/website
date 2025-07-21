@@ -30,11 +30,12 @@ fn main() -> io::Result<()> {
     let popstate_clone = Rc::clone(&app);
 
     let popstate_listener = EventListener::new(&window, "popstate", move |event| {
-        popstate_clone.borrow_mut().handle_popstate(event.clone());
+        popstate_clone.borrow_mut().handle_popstate();
     });
 
     app.borrow_mut().listener = Some(popstate_listener);
-
+    
+    Rc::clone(&app).borrow_mut().handle_popstate();
 
     let event_state = Rc::clone(&app);
     terminal.on_key_event(move |key_event| {

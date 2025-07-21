@@ -4,7 +4,11 @@
     "count": 2
   },
   {
-    "name": "wasm",
+    "name": "second",
+    "count": 1
+  },
+  {
+    "name": "ratzilla",
     "count": 2
   },
   {
@@ -12,11 +16,7 @@
     "count": 2
   },
   {
-    "name": "second",
-    "count": 1
-  },
-  {
-    "name": "ratzilla",
+    "name": "wasm",
     "count": 2
   }
 ]

@@ -133,8 +133,8 @@ impl App {
     }
 
     //TODO: move out of app
-    pub fn handle_popstate(&mut self, event: Event) {
-        web_sys::console::log_1(event.as_ref());
+    pub fn handle_popstate(&mut self) {
+        //web_sys::console::log_1(event.as_ref());
         if let Some(path) = self.window.location().pathname().ok() {
             let (display, rest) = Self::split_path(&path);
             self.update(Msg::SwitchTo(display));
