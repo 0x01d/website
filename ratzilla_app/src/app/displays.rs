@@ -35,15 +35,15 @@ impl Displays {
         }
     }
     /// Convert from URL path to Displays enum
-    pub fn from_path(path: &str) -> Displays {
+    pub fn from_path(path: Option<&str>) -> Displays {
         match path {
-            "/" | "/splash" => Displays::Splash,
-            "/intro" => Displays::Intro,
-            "/blog" => Displays::Blog,
-            "/tools" => Displays::Tools,
-            "/acknowledgements" => Displays::Acknowledgements,
-            "/contact" => Displays::Contact,
-            "/about" => Displays::About,
+            None | Some("~") => Displays::Splash,
+            Some("intro") => Displays::Intro,
+            Some("blog") => Displays::Blog,
+            Some("tools") => Displays::Tools,
+            Some("acknowledgements") => Displays::Acknowledgements,
+            Some("contact") => Displays::Contact,
+            Some("about") => Displays::About,
             _ => Displays::E404,
         }
     }
@@ -51,7 +51,7 @@ impl Displays {
     /// Get URL path for this display
     pub fn path(self) -> &'static str {
         match self {
-            Displays::Splash => "/",
+            Displays::Splash => "/~",
             Displays::Intro => "/intro",
             Displays::Blog => "/blog",
             Displays::Tools => "/tools",

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use gloo_net::http::Request;
 use chrono::NaiveDate;
 use web_sys::console;
+use wasm_bindgen::JsValue;
 use syntect::parsing::SyntaxSet;
 use syntect::highlighting::{ThemeSet, Style as SynStyle};
 use syntect::easy::HighlightLines;
@@ -42,10 +43,12 @@ pub struct BlogModel {
     pub blog_list: Vec<BlogEntry>,
     pub tag_list_state: ListState,
     pub blog_list_state: ListState,
+    pub scrollbar_state: Option<ScrollbarState>,
+    pub vertical_scroll: usize,
     active_pane: Pane,
     tx: flume::Sender<Msg>,
     rx: flume::Receiver<Msg>,
-    loaded_blog: Option<Text<'static>>,
+    pub loaded_blog: Option<Text<'static>>,
 }
 
 impl BlogModel {
@@ -60,6 +63,8 @@ impl BlogModel {
             blog_list,
             tag_list_state,
             blog_list_state,
+            scrollbar_state: None,
+            vertical_scroll: 0,
             active_pane: Pane::Post,
             loaded_blog: None,
             tx,
@@ -75,6 +80,7 @@ impl BlogModel {
         self.fetch_index();
         self.loaded = true;
     }
+
     pub fn update(&mut self, msg: crate::app::Msg) {
         match self.active_pane {
             Pane::List => {
@@ -89,16 +95,14 @@ impl BlogModel {
                         let new = (current + 1).min(max);
                         self.tag_list_state.select(Some(new));
                     }
-                    Msg::Select => {
-
-                        //let sel = self.menu_items[current];
-
-                    }
                     Msg::NavigateLeft => {
                         self.active_pane = Pane::Post;
                     }
                     Msg::NavigateRight => {
                         self.active_pane = Pane::Post;
+                    }
+                    Msg::Select => {
+                        //let sel = self.menu_items[current];
                     }
                     _ => {}
                 }
@@ -115,16 +119,28 @@ impl BlogModel {
                         let new = (current + 1).min(max);
                         self.blog_list_state.select(Some(new));
                     }
-                    Msg::Select => {
-                        let sel = &self.blog_list[current];
-                        Self::fetch_blog(sel.slug.clone(), self.tx.clone());
-
-                    }
                     Msg::NavigateLeft => {
                         self.active_pane = Pane::List;
                     }
                     Msg::NavigateRight => {
                         self.active_pane = Pane::List;
+                    }
+                    Msg::Select => {
+                        let sel = &self.blog_list[current];
+                        let path = format!("/blog/{}", &sel.slug);
+                        if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
+                            let _ = history.push_state_with_url(&JsValue::NULL, "", Some(&path));
+                        }
+                        Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
+
+                        //Self::fetch_blog(sel.slug.clone(), self.tx.clone());
+
+                    }
+                    Msg::LoadSubPath(ref path) => {
+                        if let Some(slug) = path.split('/').next() {
+                            Self::fetch_blog(slug.to_string(), self.tx.clone());
+                        }
+
                     }
                     _ => {}
                 }
@@ -200,9 +216,8 @@ impl BlogModel {
 
 
         if let Some(blog) = &self.loaded_blog {
-            let vertical_scroll = 0;
             let blog_paragraph = Paragraph::new(blog.to_owned())
-                .scroll((vertical_scroll as u16, 0))
+                .scroll((self.vertical_scroll as u16, 0))
                 .block(Block::default()
                     .title("Tags")
                     .borders(Borders::ALL)
@@ -211,8 +226,14 @@ impl BlogModel {
             let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
                 .begin_symbol(Some("↑"))
                 .end_symbol(Some("↓"));
+            f.render_widget(blog_paragraph, f.area());
+            if let Some(mut bar) = self.scrollbar_state {
+                f.render_stateful_widget(scrollbar, chunks[0].inner(Margin {vertical:1, horizontal:1}), &mut bar);
+            }
+
+        } else {
+            f.render_stateful_widget(blog_list, chunks[0], &mut self.blog_list_state);
         }
-        f.render_stateful_widget(blog_list, chunks[0], &mut self.blog_list_state);
         f.render_stateful_widget(list, chunks[1], &mut self.tag_list_state);
     }
 
@@ -226,11 +247,12 @@ impl BlogModel {
         for event in iterator {
             match event {
                 Event::Text(text) => content_styled.extend(Text::from(text.to_string())),
-                _ => {}
+                _ => {  content_styled.extend(Text::from("'".to_string())); }
             }
         }       
 
-        self.loaded_blog = Some(content_styled);
+        self.loaded_blog = Some(content_styled.clone());
+        self.scrollbar_state = Some(ScrollbarState::new(content_styled.height()).position(self.vertical_scroll));
     }
     pub fn fetch_tags(&mut self) {
         let tx_clone = self.tx.clone();

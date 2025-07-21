@@ -11,7 +11,7 @@ mod displays;
 mod splash;
 mod blog;
 mod tui_helpers;
-pub mod popstate_listener;
+//pub mod popstate_listener;
 
 use displays::Displays;
 use splash::SplashModel;
@@ -25,6 +25,7 @@ pub enum Msg {
     NavigateRight,
     Select,
     SwitchTo(Displays),
+    LoadSubPath(String),
     PushStateFromDisplay(Displays),
     UpdateBlogTags(Vec<blog::Tag>),
     UpdateBlogIndex(Vec<blog::BlogEntry>),
@@ -44,7 +45,7 @@ pub struct App {
 
 impl App {
     pub fn new(path: String, tx: flume::Sender<Msg>, rx: flume::Receiver<Msg>) -> Self {
-        let current = Displays::from_path(&path);
+        let (current, _) = Self::split_path(&path);
         let window = web_sys::window().expect("No global 'window' exists");
         Self {
             current,
@@ -62,6 +63,10 @@ impl App {
         match msg {
             Msg::SwitchTo(s) => {
                 self.current = s;
+                match s {
+                    Displays::Blog => self.blog.loaded_blog = None,
+                    _ => {}
+                }
                 return
             }
             Msg::PushStateFromDisplay(s) => {
@@ -131,8 +136,43 @@ impl App {
     pub fn handle_popstate(&mut self, event: Event) {
         web_sys::console::log_1(event.as_ref());
         if let Some(path) = self.window.location().pathname().ok() {
-            let current = Displays::from_path(&path);
-            self.update(Msg::SwitchTo(current));
+            let (display, rest) = Self::split_path(&path);
+            self.update(Msg::SwitchTo(display));
+            if let Some(sub_path) = rest {
+                self.update(Msg::LoadSubPath(sub_path));
+            }
         }
+    }
+    pub fn split_path(path: &str) -> (Displays, Option<String>) {
+            //let path_chunks: Vec<&str> = path.split('/').filter(|c| !c.is_empty()).collect();
+            let mut it = path.split('/').filter(|part| !part.is_empty());
+
+            let display = Displays::from_path(it.next());
+            if let Some(rest) = it.next() {
+                return (display, Some(rest.to_string()))
+            }
+
+            (display, None)
+
+            //web_sys::console::log_1(&path_chunks.clone().join("'").into());
+
+            //return (Displays::Splash, Vec::new());
+            /*
+            if path_chunks.is_empty() {
+                return (Displays::Splash, Vec::new())
+            }
+            
+
+            
+            //let mut res = Vec::new(); 
+            let display = Displays::from_path(path_chunks[0]);
+            //res.push(Msg::SwitchTo(display));
+            if let Some(chunks) = path_chunks.get(1..) {
+                let chunks_vec = chunks.iter().map(|c| c.to_string()).collect();
+                //res.push(Msg::LoadSubPath(chunks_vec));
+                return (display, chunks_vec)
+            }
+            (display, Vec::new())
+            */
     }
 }
