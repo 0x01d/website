@@ -23,9 +23,11 @@ pub enum Msg {
     NavigateDown,
     NavigateLeft,
     NavigateRight,
+    NavigateBack,
     Select,
     SwitchTo(Displays),
     LoadSubPath(String),
+    LoadHash(String),
     PushStateFromDisplay(Displays),
     UpdateBlogTags(Vec<blog::Tag>),
     UpdateBlogIndex(Vec<blog::BlogEntry>),
@@ -82,7 +84,18 @@ impl App {
             }
             Msg::UpdateBlogIndex(ref index) => {
                 self.blog.blog_list = index.to_vec();
-                self.blog.blog_list_state.select(Some(0));
+                if let Some(hash) = self.window.location().hash().ok() {
+                    if hash.is_empty() {
+                        self.blog.blog_list_filtered = index.to_vec();
+                        self.blog.blog_list_state.select(Some(0));
+                    } else {
+                        self.update(Msg::LoadHash(hash));
+                        self.blog.blog_list_state.select(Some(0));
+                    }
+                } else {
+                    self.blog.blog_list_filtered = index.to_vec();
+                    self.blog.blog_list_state.select(Some(0));
+                }
                 return
             }
             Msg::ParseBlogText(ref text) => {
@@ -124,6 +137,7 @@ impl App {
             KeyCode::Left => self.update(Msg::NavigateLeft),
             KeyCode::Right => self.update(Msg::NavigateRight),
             KeyCode::Enter => self.update(Msg::Select),
+            KeyCode::Backspace => self.update(Msg::NavigateBack),
             KeyCode::Esc =>  {
                 self.update(Msg::SwitchTo(Displays::Splash));
                 self.update(Msg::PushStateFromDisplay(Displays::Splash));
@@ -142,37 +156,20 @@ impl App {
                 self.update(Msg::LoadSubPath(sub_path));
             }
         }
+        if let Some(hash) = self.window.location().hash().ok() {
+            //web_sys::console::log_1(&hash.clone().into());
+            self.update(Msg::LoadHash(hash));
+        }
     }
     pub fn split_path(path: &str) -> (Displays, Option<String>) {
-            //let path_chunks: Vec<&str> = path.split('/').filter(|c| !c.is_empty()).collect();
-            let mut it = path.split('/').filter(|part| !part.is_empty());
+        //let path_chunks: Vec<&str> = path.split('/').filter(|c| !c.is_empty()).collect();
+        let mut it = path.split('/').filter(|part| !part.is_empty());
 
-            let display = Displays::from_path(it.next());
-            if let Some(rest) = it.next() {
-                return (display, Some(rest.to_string()))
-            }
+        let display = Displays::from_path(it.next());
+        if let Some(rest) = it.next() {
+            return (display, Some(rest.to_string()))
+        }
 
-            (display, None)
-
-            //web_sys::console::log_1(&path_chunks.clone().join("'").into());
-
-            //return (Displays::Splash, Vec::new());
-            /*
-            if path_chunks.is_empty() {
-                return (Displays::Splash, Vec::new())
-            }
-            
-
-            
-            //let mut res = Vec::new(); 
-            let display = Displays::from_path(path_chunks[0]);
-            //res.push(Msg::SwitchTo(display));
-            if let Some(chunks) = path_chunks.get(1..) {
-                let chunks_vec = chunks.iter().map(|c| c.to_string()).collect();
-                //res.push(Msg::LoadSubPath(chunks_vec));
-                return (display, chunks_vec)
-            }
-            (display, Vec::new())
-            */
+        (display, None)
     }
 }

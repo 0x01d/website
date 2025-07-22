@@ -39,8 +39,11 @@ enum Pane {
 
 pub struct BlogModel {
     loaded: bool,
+    filter_updated: bool,
     pub tag_list: Vec<Tag>,
     pub blog_list: Vec<BlogEntry>,
+    tag_list_filtered: Vec<Tag>,
+    pub blog_list_filtered: Vec<BlogEntry>,
     pub tag_list_state: ListState,
     pub blog_list_state: ListState,
     pub scrollbar_state: Option<ScrollbarState>,
@@ -55,12 +58,17 @@ impl BlogModel {
     pub fn new(tx: flume::Sender<Msg>, rx: flume::Receiver<Msg>) -> Self {
         let tag_list = Vec::new();
         let blog_list = Vec::new();
+        let tag_list_filtered = Vec::new();
+        let blog_list_filtered = Vec::new();
         let tag_list_state = ListState::default();
         let blog_list_state = ListState::default();
         Self {
+            filter_updated: false,
             loaded: false,
             tag_list,
             blog_list,
+            tag_list_filtered,
+            blog_list_filtered,
             tag_list_state,
             blog_list_state,
             scrollbar_state: None,
@@ -82,6 +90,27 @@ impl BlogModel {
     }
 
     pub fn update(&mut self, msg: crate::app::Msg) {
+        match msg {
+            Msg::LoadSubPath(ref path) => {
+                if let Some(slug) = path.split('/').next() {
+                    Self::fetch_blog(slug.to_string(), self.tx.clone());
+                }
+
+            }
+            Msg::LoadHash(ref hash) => {
+                console::log_1(&hash.into());
+                let tag = hash.trim_start_matches("#");
+                self.filter_blogs(&tag);
+            }
+            Msg::NavigateBack => { 
+                if self.loaded_blog.is_none() {
+                    self.tx.clone().try_send(Msg::SwitchTo(crate::app::Displays::Splash));
+                    return
+                }
+                self.loaded_blog = None;
+            }
+            _ => {}
+        }
         match self.active_pane {
             Pane::List => {
                 let current = self.tag_list_state.selected().unwrap_or(0);
@@ -102,11 +131,13 @@ impl BlogModel {
                         self.active_pane = Pane::Post;
                     }
                     Msg::Select => {
-                        let sel = &self.tag_list[current];
+                        let sel = self.tag_list[current].to_owned();
                         let path = format!("/blog/#{}", &sel.name);
                         if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
                             let _ = history.push_state_with_url(&JsValue::NULL, "", Some(&path));
                         }
+                        self.filter_blogs(&sel.name);
+                        self.loaded_blog = None;
                         //Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
                     }
                     _ => {}
@@ -136,13 +167,8 @@ impl BlogModel {
                         if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
                             let _ = history.push_state_with_url(&JsValue::NULL, "", Some(&path));
                         }
-                        Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
-                    }
-                    Msg::LoadSubPath(ref path) => {
-                        if let Some(slug) = path.split('/').next() {
-                            Self::fetch_blog(slug.to_string(), self.tx.clone());
-                        }
-
+                        Self::fetch_blog(sel.slug.to_string(), self.tx.clone());
+                        self.filter_tags(&sel.tags.clone());
                     }
                     _ => {}
                 }
@@ -161,7 +187,7 @@ impl BlogModel {
 
         let mut items: Vec<ListItem> = Vec::new();
 
-        items.extend(self.tag_list.iter().map(|tag| {
+        items.extend(self.tag_list_filtered.iter().map(|tag| {
             ListItem::new(format!("{} ({})", tag.name, tag.count))
         }));        
 
@@ -182,7 +208,7 @@ impl BlogModel {
 
         let mut blog_entries: Vec::<ListItem> = Vec::new();
 
-        blog_entries.extend(self.blog_list.iter().map(|blog| {
+        blog_entries.extend(self.blog_list_filtered.iter().map(|blog| {
             let title_span = Span::styled(&blog.title, Style::default().fg(Color::White));
             let date_span = Span::styled(format!(" - [{}] - ", blog.date), Style::default().fg(Color::White));
 
@@ -210,7 +236,7 @@ impl BlogModel {
 
         let blog_list = List::new(blog_entries)
             .block(Block::default()
-                .title("Tags")
+                .title("Posts")
                 .borders(Borders::ALL)
                 .border_style( Style::default().fg(if !list_active {Color::Yellow} else { Color::Reset }))
             )
@@ -252,13 +278,37 @@ impl BlogModel {
         for event in iterator {
             match event {
                 Event::Text(text) => content_styled.extend(Text::from(text.to_string())),
-                _ => {  content_styled.extend(Text::from("'".to_string())); }
+                _ => {}
             }
         }       
 
         self.loaded_blog = Some(content_styled.clone());
         self.scrollbar_state = Some(ScrollbarState::new(content_styled.height()).position(self.vertical_scroll));
     }
+
+    pub fn filter_blogs(&mut self, filter_tag: &str) {
+        self.blog_list_filtered.clear();
+
+        if filter_tag == "All" { self.blog_list_filtered = self.blog_list.clone();}
+
+        for blog in self.blog_list.iter() {
+            for tag in blog.tags.iter() {
+                if tag == filter_tag {
+                    self.blog_list_filtered.push(blog.to_owned()); 
+                }
+            }
+        }
+    }
+    pub fn filter_tags(&mut self, blog_tags: &Vec<String>) {
+        self.tag_list_filtered.clear();
+
+        for tag in self.tag_list.iter() {
+            if blog_tags.contains(&tag.name) || tag.name.contains(&"All".to_string()) {
+                self.tag_list_filtered.push(tag.clone());
+            }
+        }
+    } 
+
     pub fn fetch_tags(&mut self) {
         let tx_clone = self.tx.clone();
         spawn_local(async move{
