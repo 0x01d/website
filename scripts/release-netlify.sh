@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-export BUILD_SKIP_HOOK=true # Signal to pre-commit hook
-
+export BUILD_SKIP_HOOK=true
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+WORKTREE_DIR=".deploy_netlify"
+
+cleanup() {
+    echo "🧹 Cleaning up worktree..."
+    git worktree remove "$WORKTREE_DIR" --force 2>/dev/null || true
+}
+trap cleanup EXIT INT ERR
 
 # Ensure netlify.toml exists
 if [ ! -f "netlify.toml" ]; then
@@ -14,26 +20,24 @@ fi
 echo "🌐 Building production files with trunk..."
 trunk build --release --dist dist-prod
 
-echo "🔄 Switching to release-netlify branch..."
-git stash push -m "temp-stash" || true
-git checkout release-netlify || git checkout -b release-netlify
-
-echo "🔍 Enabling sparse-checkout for dist-prod and netlify.toml..."
-if ! git config core.sparseCheckout >/dev/null; then
-    git sparse-checkout init --cone
+echo "🔄 Preparing worktree for release-netlify..."
+# If branch exists, add it. If not, create it.
+if git show-ref --verify --quiet refs/heads/release-netlify; then
+    git worktree add "$WORKTREE_DIR" release-netlify
+else
+    git worktree add -b release-netlify "$WORKTREE_DIR"
 fi
-git sparse-checkout set dist-prod netlify.toml
 
-echo "✅ Adding and committing changes..."
-git add dist-prod netlify.toml
-git commit -m "Deploy: update dist-prod for Netlify" || echo "Nothing to commit."
+echo "✅ Syncing dist-prod and netlify.toml into worktree..."
+rsync -av --delete dist-prod/ "$WORKTREE_DIR/dist-prod/"
+cp netlify.toml "$WORKTREE_DIR/"
 
-echo "🚀 Pushing to origin/release-netlify..."
-git push origin release-netlify
-
-echo "↩️ Switching back to $CURRENT_BRANCH..."
-git checkout "$CURRENT_BRANCH"
-git sparse-checkout disable
-git stash pop || true
+echo "📦 Committing and pushing from worktree..."
+(
+    cd "$WORKTREE_DIR"
+    git add dist-prod netlify.toml
+    git commit -m "Deploy: update dist-prod for Netlify" || echo "Nothing to commit."
+    git push origin release-netlify
+)
 
 echo "✅ Done! Your site is live on Netlify."
