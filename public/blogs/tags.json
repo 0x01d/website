@@ -8,11 +8,11 @@
     "count": 1
   },
   {
-    "name": "rust",
+    "name": "wasm",
     "count": 2
   },
   {
-    "name": "wasm",
+    "name": "rust",
     "count": 2
   },
   {
