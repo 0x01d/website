@@ -79,6 +79,7 @@ impl App {
             }
             Msg::UpdateBlogTags(ref tags) => {
                 self.blog.tag_list = tags.to_vec();
+                self.blog.tag_list_filtered = tags.to_vec();
                 self.blog.tag_list_state.select(Some(0));
                 return
             }

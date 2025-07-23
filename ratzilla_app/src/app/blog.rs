@@ -42,7 +42,7 @@ pub struct BlogModel {
     filter_updated: bool,
     pub tag_list: Vec<Tag>,
     pub blog_list: Vec<BlogEntry>,
-    tag_list_filtered: Vec<Tag>,
+    pub tag_list_filtered: Vec<Tag>,
     pub blog_list_filtered: Vec<BlogEntry>,
     pub tag_list_state: ListState,
     pub blog_list_state: ListState,
@@ -93,12 +93,18 @@ impl BlogModel {
         match msg {
             Msg::LoadSubPath(ref path) => {
                 if let Some(slug) = path.split('/').next() {
+                        if slug.is_empty() { return }
                     Self::fetch_blog(slug.to_string(), self.tx.clone());
+                    if let Some(tags) = self.blog_list.iter() .find(|e| e.slug == slug) .map(|e| e.tags.as_slice()) {
+                            self.filter_tags(&tags.to_vec());
+                    }
+
                 }
 
             }
             Msg::LoadHash(ref hash) => {
-                console::log_1(&hash.into());
+                //console::log_1(&hash.into());
+                if hash.is_empty() { return }
                 let tag = hash.trim_start_matches("#");
                 self.filter_blogs(&tag);
             }
@@ -289,7 +295,10 @@ impl BlogModel {
     pub fn filter_blogs(&mut self, filter_tag: &str) {
         self.blog_list_filtered.clear();
 
-        if filter_tag == "All" { self.blog_list_filtered = self.blog_list.clone();}
+        if filter_tag == "All" {
+            self.blog_list_filtered = self.blog_list.clone();
+            self.tag_list_filtered = self.tag_list.clone();
+        }
 
         for blog in self.blog_list.iter() {
             for tag in blog.tags.iter() {
