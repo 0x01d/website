@@ -11,12 +11,6 @@ cleanup() {
 }
 trap cleanup EXIT INT ERR
 
-# Ensure netlify.toml exists
-if [ ! -f "netlify.toml" ]; then
-    echo "❌ netlify.toml is missing. Aborting deploy."
-    exit 1
-fi
-
 echo "🌐 Building production files with trunk..."
 trunk build --release --dist dist-prod
 
