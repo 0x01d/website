@@ -1,3 +1,3 @@
 [build]
-command = "trunk build --release"
-pulish = "dist"
+command = "echo 'Skipping build'"
+publish = "dist-prod"
