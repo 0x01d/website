@@ -1,3 +1,3 @@
 [build]
 command = "echo 'Skipping build'"
-publish = "dist-prod"
+publish = "dist-netlify-prod"
