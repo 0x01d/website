@@ -12,7 +12,7 @@ cleanup() {
 trap cleanup EXIT INT ERR
 
 echo "🌐 Building production files with trunk..."
-trunk build --release --dist dist-prod
+trunk build --release --dist dist-netlify-prod
 
 echo "🔄 Preparing worktree for release-netlify..."
 # If branch exists, add it. If not, create it.
@@ -22,15 +22,15 @@ else
     git worktree add -b release-netlify "$WORKTREE_DIR"
 fi
 
-echo "✅ Syncing dist-prod and netlify.toml into worktree..."
-rsync -av --delete dist-prod/ "$WORKTREE_DIR/dist-prod/"
+echo "✅ Syncing dist-netlify-prod and netlify.toml into worktree..."
+rsync -av --delete dist-netlify-prod/ "$WORKTREE_DIR/dist-netlify-prod/"
 cp netlify.toml "$WORKTREE_DIR/"
 
 echo "📦 Committing and pushing from worktree..."
 (
     cd "$WORKTREE_DIR"
-    git add dist-prod netlify.toml
-    git commit -m "Deploy: update dist-prod for Netlify" || echo "Nothing to commit."
+    git add dist-netlify-prod netlify.toml
+    git commit -m "Deploy: update dist-netlify-prod for Netlify" || echo "Nothing to commit."
     git push origin release-netlify
 )
 

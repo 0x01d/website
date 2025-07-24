@@ -1,5 +1,5 @@
 use ratzilla::{
-    event::{KeyCode, KeyEvent},
+    event::{KeyCode, KeyEvent, MouseButton, MouseEventKind, MouseEvent},
 };
 use ratatui::Frame;
 use web_sys::{Window, PopStateEvent, Event};
@@ -32,6 +32,8 @@ pub enum Msg {
     UpdateBlogTags(Vec<blog::Tag>),
     UpdateBlogIndex(Vec<blog::BlogEntry>),
     ParseBlogText(String),
+    MouseMove((u32,u32)),
+    MouseClick((u32,u32)),
 }
 
 pub struct App {
@@ -146,6 +148,16 @@ impl App {
             _ =>  {}
         };
     }
+    pub fn handle_mouse_events(&mut self, mouse_event: MouseEvent) {
+        let x = &mouse_event.x;
+        let y = &mouse_event.x;
+        match mouse_event.event {
+            MouseEventKind::Moved => self.update(Msg::MouseMove((*x,*y))),
+            MouseEventKind::Released => self.update(Msg::MouseClick((*x,*y))),
+            _ => {}
+        }
+
+    }
 
     //TODO: move out of app
     pub fn handle_popstate(&mut self) {
@@ -162,6 +174,7 @@ impl App {
             self.update(Msg::LoadHash(hash));
         }
     }
+
     pub fn split_path(path: &str) -> (Displays, Option<String>) {
         //let path_chunks: Vec<&str> = path.split('/').filter(|c| !c.is_empty()).collect();
         let mut it = path.split('/').filter(|part| !part.is_empty());

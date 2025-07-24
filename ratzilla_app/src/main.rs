@@ -11,7 +11,7 @@ use ratatui::{
 };
 
 use ratzilla::{
-    DomBackend, WebRenderer,
+    DomBackend, WebRenderer, event::MouseButton, event::MouseEventKind
 };
 
 
@@ -35,7 +35,14 @@ fn main() -> io::Result<()> {
 
     app.borrow_mut().listener = Some(popstate_listener);
     
+    // Send a popstate to load app on correct page
     Rc::clone(&app).borrow_mut().handle_popstate();
+
+
+    let mouse_app_clone = Rc::clone(&app);
+    terminal.on_mouse_event( move |mouse_event| {
+        mouse_app_clone.borrow_mut().handle_mouse_events(mouse_event)
+    });
 
     let event_state = Rc::clone(&app);
     terminal.on_key_event(move |key_event| {
