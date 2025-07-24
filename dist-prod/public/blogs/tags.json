@@ -4,19 +4,19 @@
     "count": 2
   },
   {
-    "name": "wasm",
-    "count": 2
-  },
-  {
     "name": "second",
     "count": 1
   },
   {
-    "name": "rust",
+    "name": "ratzilla",
     "count": 2
   },
   {
-    "name": "ratzilla",
+    "name": "wasm",
+    "count": 2
+  },
+  {
+    "name": "rust",
     "count": 2
   }
 ]
