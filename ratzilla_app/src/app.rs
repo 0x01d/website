@@ -32,8 +32,8 @@ pub enum Msg {
     UpdateBlogTags(Vec<blog::Tag>),
     UpdateBlogIndex(Vec<blog::BlogEntry>),
     ParseBlogText(String),
-    MouseMove((u32,u32)),
-    MouseClick((u32,u32)),
+    MouseMove((u16,u16)),
+    MouseClick(MouseButton),
 }
 
 pub struct App {
@@ -149,11 +149,12 @@ impl App {
         };
     }
     pub fn handle_mouse_events(&mut self, mouse_event: MouseEvent) {
-        let x = &mouse_event.x;
-        let y = &mouse_event.x;
-        match mouse_event.event {
+        let x = &mouse_event.col;
+        let y = &mouse_event.row;
+
+        match mouse_event.kind{
             MouseEventKind::Moved => self.update(Msg::MouseMove((*x,*y))),
-            MouseEventKind::Released => self.update(Msg::MouseClick((*x,*y))),
+            MouseEventKind::ButtonUp(button) => self.update(Msg::MouseClick(button)),
             _ => {}
         }
 

@@ -18,7 +18,7 @@ use ratzilla::{
 fn main() -> io::Result<()> {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     let backend = DomBackend::new()?;
-    let terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
     
     let window = window().expect("No window");
     let path = window.location().pathname().expect("No path"); 

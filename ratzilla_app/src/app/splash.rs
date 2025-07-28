@@ -1,6 +1,6 @@
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 use crate::app::displays::Displays;
 use crate::app::Msg;
@@ -11,6 +11,8 @@ pub struct SplashModel {
     intro: IntroModel,
     menu_items: Vec<Displays>,
     list_state: ListState,
+    mouse_coords: (u16, u16),
+    menu_area: Rect,
 }
 
 impl SplashModel {
@@ -22,6 +24,8 @@ impl SplashModel {
             intro: IntroModel::new(),
             menu_items: items,
             list_state: state,
+            mouse_coords: (0,0),
+            menu_area: Rect::default(),
         }
     }
 
@@ -47,6 +51,30 @@ impl SplashModel {
 
                 msg_list
             }
+            Msg::MouseMove(coords) =>  { 
+                self.mouse_coords = coords;
+                if self.mouse_coords.1 > self.menu_area.y && self.mouse_coords.1 <= (self.menu_area.y + self.menu_items.len() as u16){
+                    if self.mouse_coords.0 > self.menu_area.x && self.mouse_coords.0 < (self.menu_area.x + self.menu_area.width) {
+                        let new = self.mouse_coords.1.saturating_sub(self.menu_area.y + 1);
+                        self.list_state.select(Some(new as usize));
+                    }
+                }
+                    
+                msg_list
+            }
+            Msg::MouseClick(coords) =>  { 
+                if self.mouse_coords.1 > self.menu_area.y && self.mouse_coords.1 <= (self.menu_area.y + self.menu_items.len() as u16){
+                    if self.mouse_coords.0 > self.menu_area.x && self.mouse_coords.0 < (self.menu_area.x + self.menu_area.width) {
+                        let new = self.mouse_coords.1.saturating_sub(self.menu_area.y + 1);
+                        self.list_state.select(Some(new as usize));
+                        let sel = self.menu_items[current];
+                        msg_list.push(Msg::SwitchTo(sel.into()));
+                        msg_list.push(Msg::PushStateFromDisplay(sel.into()));
+                    }
+                }
+
+                msg_list
+            }
             _ => msg_list
         }
     }
@@ -68,15 +96,24 @@ impl SplashModel {
                 Constraint::Length(21),  // ASCII art + title
                 Constraint::Length(1),     // Spacer
                 Constraint::Length(menu_height),  // Menu height
+                Constraint::Length(2),
             ])
             .split(f.area());        
         self.intro.view(f, chunks[0]);
-        let menu_area = centered_rect(23, 100, chunks[2]);
+        self.menu_area = centered_rect(23, 100, chunks[2]);
 
         let list = List::new(items)
             .block(Block::default().title("Menu").borders(Borders::ALL))
             .highlight_style(Style::default().bg(Color::Yellow));
 
-        f.render_stateful_widget(list, menu_area, &mut self.list_state);
+        let p: Paragraph = Paragraph::new(
+            vec![
+            Line::from(format!("x:{},y:{}", self.mouse_coords.0, self.mouse_coords.1)),
+            Line::from(format!("{},{},{},{}", self.menu_area.x, self.menu_area.y, self.menu_area.width, self.menu_area.height))
+            ]
+        );
+        f.render_widget(p, chunks[3]);
+
+        f.render_stateful_widget(list, self.menu_area, &mut self.list_state);
     }
 }

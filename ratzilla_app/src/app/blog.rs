@@ -39,6 +39,7 @@ enum Pane {
 
 pub struct BlogModel {
     loaded: bool,
+    mouse_coords: (u16, u16),
     filter_updated: bool,
     pub tag_list: Vec<Tag>,
     pub blog_list: Vec<BlogEntry>,
@@ -46,6 +47,8 @@ pub struct BlogModel {
     pub blog_list_filtered: Vec<BlogEntry>,
     pub tag_list_state: ListState,
     pub blog_list_state: ListState,
+    blog_list_rect: Rect,
+    tag_list_rect: Rect,
     pub scrollbar_state: Option<ScrollbarState>,
     pub vertical_scroll: usize,
     active_pane: Pane,
@@ -64,11 +67,14 @@ impl BlogModel {
         let blog_list_state = ListState::default();
         Self {
             filter_updated: false,
+            mouse_coords: (0, 0),
             loaded: false,
             tag_list,
             blog_list,
             tag_list_filtered,
             blog_list_filtered,
+            blog_list_rect: Rect::default(),
+            tag_list_rect: Rect::default(),
             tag_list_state,
             blog_list_state,
             scrollbar_state: None,
@@ -91,12 +97,25 @@ impl BlogModel {
 
     pub fn update(&mut self, msg: crate::app::Msg) {
         match msg {
+            Msg::MouseMove(coords) =>  { 
+                self.mouse_coords = coords;
+                if self.mouse_coords.0 < self.blog_list_rect.width {
+                    self.active_pane = Pane::Post;
+                    let new = self.mouse_coords.1.saturating_sub(self.blog_list_rect.y + 1);
+                    self.blog_list_state.select(Some(new as usize));
+                } else {
+                    self.active_pane = Pane::List;
+                    let new = self.mouse_coords.1.saturating_sub(self.tag_list_rect.y + 1);
+                    self.tag_list_state.select(Some(new as usize));
+                }
+
+            }
             Msg::LoadSubPath(ref path) => {
                 if let Some(slug) = path.split('/').next() {
-                        if slug.is_empty() { return }
+                    if slug.is_empty() { return }
                     Self::fetch_blog(slug.to_string(), self.tx.clone());
                     if let Some(tags) = self.blog_list.iter() .find(|e| e.slug == slug) .map(|e| e.tags.as_slice()) {
-                            self.filter_tags(&tags.to_vec());
+                        self.filter_tags(&tags.to_vec());
                     }
 
                 }
@@ -146,6 +165,11 @@ impl BlogModel {
                         self.loaded_blog = None;
                         //Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
                     }
+                    Msg::MouseClick(btn) => {
+                        if self.mouse_coords.1 < self.tag_list_rect.y + 1 + self.tag_list.len() as u16 {
+                            self.update(Msg::Select);
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -176,6 +200,11 @@ impl BlogModel {
                         Self::fetch_blog(sel.slug.to_string(), self.tx.clone());
                         self.filter_tags(&sel.tags.clone());
                     }
+                    Msg::MouseClick(btn) => {
+                        if self.mouse_coords.1 < self.blog_list_rect.y + 1 + self.blog_list.len() as u16 {
+                            self.update(Msg::Select);
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -190,6 +219,9 @@ impl BlogModel {
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
             .split(f.area());
+
+        self.blog_list_rect = chunks[0];
+        self.tag_list_rect = chunks[1];
 
         let mut items: Vec<ListItem> = Vec::new();
 

@@ -8,15 +8,15 @@
     "count": 1
   },
   {
+    "name": "rust",
+    "count": 2
+  },
+  {
     "name": "ratzilla",
     "count": 2
   },
   {
     "name": "wasm",
-    "count": 2
-  },
-  {
-    "name": "rust",
     "count": 2
   }
 ]
