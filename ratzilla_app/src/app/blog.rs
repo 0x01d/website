@@ -128,9 +128,18 @@ impl BlogModel {
                 self.filter_blogs(&tag);
             }
             Msg::NavigateBack => { 
+                //TODO: Unify behaviour with back btn.
                 if self.loaded_blog.is_none() {
+                    if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
+                        let _ = history.push_state_with_url(&JsValue::NULL, "", Some("~"));
+                    }
                     self.tx.clone().try_send(Msg::SwitchTo(crate::app::Displays::Splash));
                     return
+                } else {
+                    if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
+                        let _ = history.push_state_with_url(&JsValue::NULL, "", Some("/blog"));
+                    }
+
                 }
                 self.loaded_blog = None;
             }

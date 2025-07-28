@@ -41,19 +41,16 @@ impl IntroModel {
         let timer = (1000, Interpolation::Linear);
         let fg_shift = [120.0, 25.0, 25.0];
         let bg_shift = [-40.0, -50.0, -50.0];
-        let fx_para = fx::sequence(&[
+        let fx_seq = fx::sequence(&[
             fx::coalesce(2222),
-            fx::sleep(2222),
-            fx::dissolve(2222),
         ]);
-        let fx_seq = fx::parallel(&[
-            fx_para,
-            fx::hsl_shift(Some(fg_shift), Some(bg_shift), timer),
-            fx::fade_from(c, c, (1000, Interpolation::CircOut))
+        let fx_para = fx::parallel(&[
+            fx_seq.clone(),
+            //fx::slide_in(tachyonfx::Motion::DownToUp, 10, 909, Color::Black, 2000),
         ]);
 
         let mut manager: EffectManager<()> = EffectManager::default();
-        manager.add_effect(fx_seq);
+        manager.add_effect(fx_para);
         Self {
             last_frame: Instant::now(),
             fx_manager: manager,
