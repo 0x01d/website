@@ -11,13 +11,13 @@ use ratatui::{
 };
 
 use ratzilla::{
-    DomBackend, WebRenderer, event::MouseButton, event::MouseEventKind
+    CanvasBackend, WebRenderer, event::MouseButton, event::MouseEventKind
 };
 
 
 fn main() -> io::Result<()> {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    let backend = DomBackend::new()?;
+    let backend = CanvasBackend::new()?;
     let mut terminal = Terminal::new(backend)?;
     
     let window = window().expect("No window");

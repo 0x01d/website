@@ -11,11 +11,8 @@ use gloo_net::http::Request;
 use chrono::NaiveDate;
 use web_sys::console;
 use wasm_bindgen::JsValue;
-use syntect::parsing::SyntaxSet;
-use syntect::highlighting::{ThemeSet, Style as SynStyle};
-use syntect::easy::HighlightLines;
-use syntect::util::LinesWithEndings;
 
+use crate::app::markdown_renderer::MarkdownRenderer;
 use crate::app::Msg;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -54,7 +51,8 @@ pub struct BlogModel {
     active_pane: Pane,
     tx: flume::Sender<Msg>,
     rx: flume::Receiver<Msg>,
-    pub loaded_blog: Option<Text<'static>>,
+    //pub loaded_blog: Option<Text<'static>>,
+    pub loaded_blog: MarkdownRenderer,
 }
 
 impl BlogModel {
@@ -80,7 +78,7 @@ impl BlogModel {
             scrollbar_state: None,
             vertical_scroll: 0,
             active_pane: Pane::Post,
-            loaded_blog: None,
+            loaded_blog: MarkdownRenderer::new(),
             tx,
             rx,
         }
@@ -129,7 +127,7 @@ impl BlogModel {
             }
             Msg::NavigateBack => { 
                 //TODO: Unify behaviour with back btn.
-                if self.loaded_blog.is_none() {
+                if self.loaded_blog.loaded_blog.is_none() {
                     if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
                         let _ = history.push_state_with_url(&JsValue::NULL, "", Some("~"));
                     }
@@ -141,7 +139,7 @@ impl BlogModel {
                     }
 
                 }
-                self.loaded_blog = None;
+                self.loaded_blog.loaded_blog = None;
             }
             _ => {}
         }
@@ -171,7 +169,7 @@ impl BlogModel {
                             let _ = history.push_state_with_url(&JsValue::NULL, "", Some(&path));
                         }
                         self.filter_blogs(&sel.name);
-                        self.loaded_blog = None;
+                        self.loaded_blog.loaded_blog = None;
                         //Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
                     }
                     Msg::MouseClick(btn) => {
@@ -290,9 +288,9 @@ impl BlogModel {
             .highlight_style(Style::default().bg(Color::Yellow).fg(Color::Black));
 
 
-        if let Some(blog) = &self.loaded_blog {
+        if let Some(blog) = &self.loaded_blog.loaded_blog {
             let blog_paragraph = Paragraph::new(blog.to_owned())
-                .scroll((self.vertical_scroll as u16, 0))
+                .scroll((self.loaded_blog.vertical_scroll as u16, 0))
                 .block(Block::default()
                     .title("Post")
                     .borders(Borders::ALL)
@@ -316,21 +314,37 @@ impl BlogModel {
     }
 
     pub fn parse_blog_text(&mut self, content: String) {
-        use pulldown_cmark::{Event, Parser, TextMergeStream};
+        self.loaded_blog.parse_blog_text(content);
+        /* use pulldown_cmark::{Event, Parser, TextMergeStream};
 
         let iterator = TextMergeStream::new(Parser::new(&content));
 
         let mut content_styled: Text = Text::default();
-
+        
         for event in iterator {
+            let styled_span = Span::default();
             match event {
                 Event::Text(text) => content_styled.extend(Text::from(text.to_string())),
+                Event::Start(html_tag) => {
+                    match html_tag {
+                        //pulldown_cmark::Tag::Paragraph => {},
+                        pulldown_cmark::Tag::CodeBlock(bkind) => {
+
+                        },
+                        pulldown_cmark::Tag::BlockQuote(_) => {},
+
+                        _ => {},
+                    }
+                }
+                Event::Code(code_content) => {
+
+                }
                 _ => {}
             }
         }       
 
-        self.loaded_blog = Some(content_styled.clone());
-        self.scrollbar_state = Some(ScrollbarState::new(content_styled.height()).position(self.vertical_scroll));
+        //self.loaded_blog = Some(content_styled.clone());
+        self.scrollbar_state = Some(ScrollbarState::new(content_styled.height()).position(self.vertical_scroll)); */
     }
 
     pub fn filter_blogs(&mut self, filter_tag: &str) {

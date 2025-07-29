@@ -11,12 +11,16 @@ mod displays;
 mod splash;
 mod blog;
 mod tui_helpers;
+pub mod markdown_renderer;
+mod tool_mutation_observer;
+mod tools;
 //pub mod popstate_listener;
 
 use displays::Displays;
 use splash::SplashModel;
 use blog::BlogModel;
 use intro::IntroModel;
+
 
 pub enum Msg {
     NavigateUp,
@@ -68,7 +72,7 @@ impl App {
             Msg::SwitchTo(s) => {
                 self.current = s;
                 match s {
-                    Displays::Blog => self.blog.loaded_blog = None,
+                    Displays::Blog => self.blog.loaded_blog.loaded_blog = None,
                     _ => {}
                 }
                 return
