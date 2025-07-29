@@ -305,7 +305,7 @@ impl WindowScanner {
         } else if value.is_function() {
             // Try to get function signature
             if let Some(func) = value.dyn_ref::<Function>() {
-                return func.as_string().expect("???")
+                return func.as_string().unwrap_or("???".to_string())
             } else {
                 return "[Function]".to_string()
                 }
@@ -836,62 +836,62 @@ impl DeepExtensionScanner {
 
     /// Get a human-readable report
     #[wasm_bindgen(js_name = generateReport)]
-    pub fn generate_report(&self) -> String {
+    pub fn generate_report(&self) -> Vec<String> {
         let scan_value = self.run_deep_scan();
         if let Ok(results) = scan_value.into_serde::<DeepScanResults>() {
             self.format_report(&results)
         } else {
-            "Error generating report".to_string()
+            vec!["Error generating report".to_string()]
         }
     }
 
-    fn format_report(&self, results: &DeepScanResults) -> String {
-        let mut report = String::new();
+    fn format_report(&self, results: &DeepScanResults) -> Vec<String> {
+        let mut report = Vec::new();
 
-        report.push_str(&format!("=== Deep Extension Scan Report ===\n"));
-        report.push_str(&format!("Timestamp: {}\n\n", js_sys::Date::new(&JsValue::from(results.timestamp)).to_string()));
+        report.push(format!("=== Deep Extension Scan Report ===\n"));
+        report.push(format!("Timestamp: {}\n\n", js_sys::Date::new(&JsValue::from(results.timestamp)).to_string()));
 
         // Statistics
-        report.push_str("=== Statistics ===\n");
-        report.push_str(&format!("Total Window Properties: {}\n", results.statistics.total_window_properties));
-        report.push_str(&format!("Non-Native Properties: {}\n", results.statistics.non_native_properties));
-        report.push_str(&format!("Potential Extension Properties: {}\n", results.statistics.potential_extension_properties));
-        report.push_str(&format!("Total DOM Elements Scanned: {}\n", results.statistics.total_dom_elements));
-        report.push_str(&format!("Suspicious Elements: {}\n", results.statistics.suspicious_elements));
-        report.push_str(&format!("Shadow Roots Found: {}\n", results.statistics.shadow_roots_found));
-        report.push_str(&format!("Custom Elements: {}\n", results.statistics.custom_elements_found));
-        report.push_str(&format!("Hidden Elements: {}\n\n", results.statistics.hidden_elements_found));
+        report.push("=== Statistics ===\n".to_string());
+        report.push(format!("Total Window Properties: {}\n", results.statistics.total_window_properties));
+        report.push(format!("Non-Native Properties: {}\n", results.statistics.non_native_properties));
+        report.push(format!("Potential Extension Properties: {}\n", results.statistics.potential_extension_properties));
+        report.push(format!("Total DOM Elements Scanned: {}\n", results.statistics.total_dom_elements));
+        report.push(format!("Suspicious Elements: {}\n", results.statistics.suspicious_elements));
+        report.push(format!("Shadow Roots Found: {}\n", results.statistics.shadow_roots_found));
+        report.push(format!("Custom Elements: {}\n", results.statistics.custom_elements_found));
+        report.push(format!("Hidden Elements: {}\n\n", results.statistics.hidden_elements_found));
 
         // Window scan results
-        report.push_str("=== Window Object Analysis ===\n");
+        report.push("=== Window Object Analysis ===\n".to_string());
 
         if let Some(extensions) = results.window_scan.get("potential_extensions") {
-            report.push_str("\nPotential Extension Properties:\n");
+            report.push("\nPotential Extension Properties:\n".to_string());
             for prop in extensions {
-                report.push_str(&format!("  - {} ({}): {}\n", 
+                report.push(format!("  - {} ({}): {}\n", 
                     prop.name, prop.prop_type, prop.value_preview));
                 if !prop.is_native {
-                    report.push_str(&format!("    Non-native: true, Enumerable: {}, Configurable: {}\n",
+                    report.push(format!("    Non-native: true, Enumerable: {}, Configurable: {}\n",
                         prop.enumerable, prop.configurable));
                 }
             }
         }
 
         if let Some(suspicious) = results.window_scan.get("suspicious") {
-            report.push_str("\nSuspicious Window Properties:\n");
+            report.push("\nSuspicious Window Properties:\n".to_string());
             for prop in suspicious {
-                report.push_str(&format!("  - {} ({}): {}\n", 
+                report.push(format!("  - {} ({}): {}\n", 
                     prop.name, prop.prop_type, prop.value_preview));
             }
         }
 
         // DOM scan results
-        report.push_str("\n=== DOM Analysis ===\n");
+        report.push("\n=== DOM Analysis ===\n".to_string());
 
         if let Some(suspicious) = results.dom_scan.get("suspicious") {
-            report.push_str("\nSuspicious Elements:\n");
+            report.push("\nSuspicious Elements:\n".to_string());
             for elem in suspicious {
-                report.push_str(&format!("  - <{}{}{}>\n",
+                report.push(format!("  - <{}{}{}>\n",
                     elem.tag_name,
                     elem.id.as_ref().map(|id| format!(" id=\"{}\"", id)).unwrap_or_default(),
                     if elem.class_list.is_empty() { 
@@ -902,23 +902,23 @@ impl DeepExtensionScanner {
                 ));
 
                 if !elem.data_attributes.is_empty() {
-                    report.push_str("    Data attributes: ");
+                    report.push("    Data attributes: ".to_string());
                     for (key, val) in &elem.data_attributes {
-                        report.push_str(&format!("{}=\"{}\" ", key, val));
+                        report.push(format!("{}=\"{}\" ", key, val));
                     }
-                    report.push_str("\n");
+                    report.push("\n".to_string());
                 }
 
                 if let Some(parent) = &elem.parent_info {
-                    report.push_str(&format!("    Parent: {}\n", parent));
+                    report.push(format!("    Parent: {}\n", parent));
                 }
             }
         }
 
         if let Some(shadow_roots) = results.dom_scan.get("shadow_roots") {
-            report.push_str("\nElements with Shadow DOM:\n");
+            report.push("\nElements with Shadow DOM:\n".to_string());
             for elem in shadow_roots {
-                report.push_str(&format!("  - <{}{}>\n",
+                report.push(format!("  - <{}{}>\n",
                     elem.tag_name,
                     elem.id.as_ref().map(|id| format!(" id=\"{}\"", id)).unwrap_or_default()
                 ));

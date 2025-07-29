@@ -20,6 +20,7 @@ use displays::Displays;
 use splash::SplashModel;
 use blog::BlogModel;
 use intro::IntroModel;
+use tool_mutation_observer::MutationObserverModel;
 
 
 pub enum Msg {
@@ -38,6 +39,7 @@ pub enum Msg {
     ParseBlogText(String),
     MouseMove((u16,u16)),
     MouseClick(MouseButton),
+    GetReport,
 }
 
 pub struct App {
@@ -45,6 +47,7 @@ pub struct App {
     splash: SplashModel,
     blog: BlogModel,
     intro: IntroModel,
+    mutation_observer: MutationObserverModel,
     window: Window,
     pub listener: Option<EventListener>,
     tx: flume::Sender<Msg>,
@@ -60,6 +63,7 @@ impl App {
             intro: IntroModel::new(),
             splash: SplashModel::new(),
             blog: BlogModel::new(tx.clone(), rx.clone()),
+            mutation_observer: MutationObserverModel::new(),
             window,
             listener: None,
             rx,
@@ -73,6 +77,7 @@ impl App {
                 self.current = s;
                 match s {
                     Displays::Blog => self.blog.loaded_blog.loaded_blog = None,
+                    Displays::MutationObserver => self.mutation_observer.update(Msg::GetReport),
                     _ => {}
                 }
                 return
@@ -130,6 +135,7 @@ impl App {
         match self.current {
             Displays::Splash => self.splash.view(frame),
             Displays::Blog => self.blog.view(frame),
+            Displays::MutationObserver => self.mutation_observer.view(frame),
             _ => {}
         } 
         if let Some(msg) = self.rx.try_recv().ok() {
