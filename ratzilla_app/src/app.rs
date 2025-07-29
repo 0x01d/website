@@ -127,6 +127,9 @@ impl App {
                     _ => self.blog.update(msg),
                 }
             }
+            Displays::MutationObserver => {
+                self.mutation_observer.update(msg);
+            }
             _ => {}
         }
     }

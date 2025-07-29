@@ -305,7 +305,7 @@ impl WindowScanner {
         } else if value.is_function() {
             // Try to get function signature
             if let Some(func) = value.dyn_ref::<Function>() {
-                return func.as_string().unwrap_or("???".to_string())
+                return func.to_string().as_string().unwrap_or("???".to_string())
             } else {
                 return "[Function]".to_string()
                 }
