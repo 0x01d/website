@@ -933,16 +933,16 @@ impl DeepExtensionScanner {
 // Monitoring & Real-time Detection
 // ============================================================================
 
-#[wasm_bindgen]
+//#[wasm_bindgen]
 pub struct ExtensionMonitor {
     window_baseline: HashSet<String>,
     mutation_observer: Option<web_sys::MutationObserver>,
     property_check_interval: Option<i32>,
 }
 
-#[wasm_bindgen]
+//#[wasm_bindgen]
 impl ExtensionMonitor {
-    #[wasm_bindgen(constructor)]
+    //#[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Self {
             window_baseline: Self::capture_window_baseline(),
@@ -952,19 +952,19 @@ impl ExtensionMonitor {
     }
 
     /// Start monitoring for changes
-    #[wasm_bindgen(js_name = startMonitoring)]
-    pub fn start_monitoring(&mut self, callback: &js_sys::Function) -> Result<(), JsValue> {
+    //#[wasm_bindgen(js_name = startMonitoring)]
+    pub fn start_monitoring(&mut self, tx: flume::Sender<crate::app::Msg>) -> Result<(), JsValue> {
         // Start DOM monitoring
-        self.start_dom_monitoring(callback)?;
+        self.start_dom_monitoring(tx.clone())?;
 
         // Start window property monitoring
-        self.start_window_monitoring(callback)?;
+        self.start_window_monitoring(tx.clone())?;
 
         Ok(())
     }
 
     /// Stop all monitoring
-    #[wasm_bindgen(js_name = stopMonitoring)]
+    //#[wasm_bindgen(js_name = stopMonitoring)]
     pub fn stop_monitoring(&mut self) {
         // Stop DOM observer
         if let Some(observer) = &self.mutation_observer {
@@ -993,8 +993,8 @@ impl ExtensionMonitor {
         baseline
     }
 
-    fn start_dom_monitoring(&mut self, callback: &js_sys::Function) -> Result<(), JsValue> {
-        let callback_clone = callback.clone();
+    fn start_dom_monitoring(&mut self, tx: flume::Sender<crate::app::Msg>) -> Result<(), JsValue> {
+        //let callback_clone = callback.clone();
 
         let closure = Closure::wrap(Box::new(move |mutations: Array, _observer: JsValue| {
             for i in 0..mutations.length() {
@@ -1010,7 +1010,7 @@ impl ExtensionMonitor {
                             let id = element.id();
                             let classes = element.class_name();
 
-                            // Create change notification
+                            /* // Create change notification
                             let change = js_sys::Object::new();
                             let _ = Reflect::set(&change, &"type".into(), &"dom_addition".into());
                             
@@ -1023,7 +1023,21 @@ impl ExtensionMonitor {
                             let _ = Reflect::set(&change, &"element".into(), &elem_info);
 
                             // Call callback
-                            let _ = callback_clone.call1(&JsValue::NULL, &change);
+                            let _ = callback_clone.call1(&JsValue::NULL, &change); */
+
+                            // Pure rust implementation, keep above just in case
+                            let ret_vec = vec![
+                                ("msg_type".to_string(), "dom_addition".to_string()),
+                                ("tag".to_string(), tag),
+                                ("id".to_string(), id),
+                                ("classes".to_string(), classes),
+
+                            ];
+                            let ret_msg = (ret_vec, web_time::Instant::now());
+
+                            let _ = tx.clone().try_send(crate::app::Msg::ReturnMutationResult(ret_msg));
+
+
                         }
                     }
                 }
@@ -1046,9 +1060,9 @@ impl ExtensionMonitor {
         Ok(())
     }
 
-    fn start_window_monitoring(&mut self, callback: &js_sys::Function) -> Result<(), JsValue> {
+    fn start_window_monitoring(&mut self, tx: flume::Sender<crate::app::Msg>) -> Result<(), JsValue> {
         let baseline = self.window_baseline.clone();
-        let callback_clone = callback.clone();
+        //let callback_clone = callback.clone();
 
         let closure = Closure::wrap(Box::new(move || {
             let window = window().unwrap();
@@ -1062,7 +1076,7 @@ impl ExtensionMonitor {
                         let prop_type = if value.is_function() { "function" } 
                         else if value.is_object() { "object" }
                         else { "other" };
-
+                       /*  
                         // Create change notification
                         let change = js_sys::Object::new();
                         let _ = Reflect::set(&change, &"type".into(), &"window_property_added".into());
@@ -1076,6 +1090,16 @@ impl ExtensionMonitor {
 
                         // Call callback
                         let _ = callback_clone.call1(&JsValue::NULL, &change);
+                        */                   
+                        let ret_vec = vec![
+                            ("msg_type".to_string(), "window_property_added".to_string()),
+                            ("name".to_string(), prop.as_str().to_string()),
+                            ("type".to_string(), prop_type.to_string()),
+                        ];
+                        let ret_msg = (ret_vec, web_time::Instant::now());
+
+                        let _ = tx.clone().try_send(crate::app::Msg::ReturnMutationResult(ret_msg));
+
                     }
                 }
             }

@@ -40,6 +40,8 @@ pub enum Msg {
     MouseMove((u16,u16)),
     MouseClick(MouseButton),
     GetReport,
+    StartScan,
+    ReturnMutationResult((Vec<(String, String)>, web_time::Instant)),
 }
 
 pub struct App {
@@ -63,7 +65,7 @@ impl App {
             intro: IntroModel::new(),
             splash: SplashModel::new(),
             blog: BlogModel::new(tx.clone(), rx.clone()),
-            mutation_observer: MutationObserverModel::new(),
+            mutation_observer: MutationObserverModel::new(tx.clone()),
             window,
             listener: None,
             rx,
@@ -77,7 +79,10 @@ impl App {
                 self.current = s;
                 match s {
                     Displays::Blog => self.blog.loaded_blog.loaded_blog = None,
-                    Displays::MutationObserver => self.mutation_observer.update(Msg::GetReport),
+                    Displays::MutationObserver => {
+                        self.mutation_observer.update(Msg::GetReport);
+                        self.mutation_observer.update(Msg::StartScan);
+                    }
                     _ => {}
                 }
                 return
