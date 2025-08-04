@@ -16,19 +16,6 @@
   # WASM optimizations
   RUSTFLAGS = "-C target-feature=+atomics,+bulk-memory,+mutable-globals -C opt-level=3"
 
-# Cache configuration for faster builds
-[[plugins]]
-  package = "netlify-plugin-cache"
-  
-  [plugins.inputs]
-  # Cache Rust/Cargo directories
-  paths = [
-    ".cargo",
-    ".rustup",
-    "target",
-    "~/.cargo",
-    "~/.rustup"
-  ]
 
 # Redirects for SPA routing
 [[redirects]]
