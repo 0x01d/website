@@ -12,9 +12,12 @@ else
     echo "Rust already installed"
 fi
 
+echo "Rustup default stable"
+rustup default stable
+
 # Add wasm target
 echo "Adding WASM target..."
-#rustup target add wasm32-unknown-unknown
+rustup target add wasm32-unknown-unknown
 
 # Install trunk if not present
 if ! command -v trunk &> /dev/null; then
