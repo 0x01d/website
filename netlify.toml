@@ -14,14 +14,8 @@
   CARGO_NET_GIT_FETCH_WITH_CLI = "true"
   
   # WASM optimizations
-  RUSTFLAGS = "-C target-feature=+atomics,+bulk-memory,+mutable-globals -C opt-level=3"
+  RUSTFLAGS = "-C opt-level=3"
 
-
-# Redirects for SPA routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
 
 # Headers for WASM and CORS
 [[headers]]
