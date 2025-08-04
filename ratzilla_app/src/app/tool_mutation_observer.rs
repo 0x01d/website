@@ -8,6 +8,10 @@ use crate::app::tools::window_scanner::{
     DeepExtensionScanner, ExtensionMonitor
 };
 use crate::app::Msg;
+enum Pane {
+    Scanner,
+    Monitor,
+}
 
 pub struct MutationObserverModel {
     output_deep: Text<'static>,
@@ -18,6 +22,7 @@ pub struct MutationObserverModel {
     vertical_scroll_obs: usize,
     height_window_scan: u16,
     tx: flume::Sender<Msg>,
+    selected: Pane,
 
 }
 
@@ -31,7 +36,8 @@ impl MutationObserverModel {
             vertical_scroll: 0,
             vertical_scroll_obs: 0,
             height_window_scan: 0,
-            tx 
+            tx, 
+            selected: Pane::Scanner,
         }
     }
 
@@ -53,10 +59,28 @@ impl MutationObserverModel {
                 }
             }
             Msg::NavigateDown => {
-                self.vertical_scroll = self.vertical_scroll.saturating_add(self.height_window_scan as usize);
+                match self.selected {
+                    Pane::Scanner => self.vertical_scroll = self.vertical_scroll.saturating_add(self.height_window_scan as usize),
+                    Pane::Monitor => self.vertical_scroll_obs = self.vertical_scroll_obs.saturating_add(1),
+                }
             }
             Msg::NavigateUp => {
-                self.vertical_scroll = self.vertical_scroll.saturating_sub(self.height_window_scan as usize);
+                match self.selected {
+                    Pane::Scanner => self.vertical_scroll = self.vertical_scroll.saturating_sub(self.height_window_scan as usize),
+                    Pane::Monitor => self.vertical_scroll_obs = self.vertical_scroll_obs.saturating_sub(1),
+                }
+            }
+            Msg::NavigateLeft => {
+                match self.selected {
+                    Pane::Scanner => self.selected = Pane::Monitor,
+                    Pane::Monitor => self.selected = Pane::Scanner,
+                }
+            }
+            Msg::NavigateRight => {
+                match self.selected {
+                    Pane::Scanner => self.selected = Pane::Monitor,
+                    Pane::Monitor => self.selected = Pane::Scanner,
+                }
             }
             _ => {}
         }
@@ -64,6 +88,11 @@ impl MutationObserverModel {
     }
 
     pub fn view(&mut self, f: &mut Frame) {
+        let scanner_active = match self.selected {
+            Pane::Scanner => true,
+            Pane::Monitor => false,
+        };
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -71,10 +100,16 @@ impl MutationObserverModel {
                 Constraint::Percentage(20), 
             ])
             .split(f.area());
+
         self.height_window_scan = chunks[0].height;
 
         let p = Paragraph::new(self.output_deep.clone())
-            .block(Block::default().title("Deep Scan").borders(Borders::ALL))
+            .block(Block::default().title("Deep Scan")
+                .borders(Borders::ALL)
+                .border_style( Style::default()
+                    .fg(if scanner_active {Color::Yellow} else { Color::Reset })
+                ))
+
             .scroll((self.vertical_scroll as u16, 0));
 
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -98,7 +133,11 @@ impl MutationObserverModel {
 
         //=====================================================================
         let p_obs = Paragraph::new(self.output_notif.clone())
-            .block(Block::default().title("Mutation Observer").borders(Borders::ALL))
+            .block(Block::default().title("Mutation Observer")
+                .borders(Borders::ALL)
+                .border_style( Style::default()
+                    .fg(if !scanner_active {Color::Yellow} else { Color::Reset })
+                ))
             .scroll((self.vertical_scroll_obs as u16, 0));
 
         let scrollbar_obs = Scrollbar::new(ScrollbarOrientation::VerticalRight)
