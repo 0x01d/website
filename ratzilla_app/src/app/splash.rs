@@ -106,13 +106,13 @@ impl SplashModel {
             .block(Block::default().title("Menu").borders(Borders::ALL))
             .highlight_style(Style::default().bg(Color::Yellow));
 
-        let p: Paragraph = Paragraph::new(
+        /* let p: Paragraph = Paragraph::new(
             vec![
             Line::from(format!("x:{},y:{}", self.mouse_coords.0, self.mouse_coords.1)),
             Line::from(format!("{},{},{},{}", self.menu_area.x, self.menu_area.y, self.menu_area.width, self.menu_area.height))
             ]
         );
-        f.render_widget(p, chunks[3]);
+        f.render_widget(p, chunks[3]); */
 
         f.render_stateful_widget(list, self.menu_area, &mut self.list_state);
     }
