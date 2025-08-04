@@ -1,3 +1,62 @@
 [build]
-command = "echo 'Skipping build'"
-publish = "dist-netlify-prod"
+  # Using the build script
+  command = "chmod +x build.sh && ./build.sh"
+  publish = "dist"
+
+[build.environment]
+  # Rust configuration
+  RUST_VERSION = "stable"
+  CARGO_HOME = "/opt/buildhome/.cargo"
+  RUSTUP_HOME = "/opt/buildhome/.rustup"
+  
+  # Improve build performance
+  CARGO_INCREMENTAL = "1"
+  CARGO_NET_GIT_FETCH_WITH_CLI = "true"
+  
+  # WASM optimizations
+  RUSTFLAGS = "-C target-feature=+atomics,+bulk-memory,+mutable-globals -C opt-level=3"
+
+# Cache configuration for faster builds
+[[plugins]]
+  package = "netlify-plugin-cache"
+  
+  [plugins.inputs]
+  # Cache Rust/Cargo directories
+  paths = [
+    ".cargo",
+    ".rustup",
+    "target",
+    "~/.cargo",
+    "~/.rustup"
+  ]
+
+# Redirects for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for WASM and CORS
+[[headers]]
+  for = "/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Content-Encoding = "gzip"
+    Cache-Control = "public, max-age=31536000, immutable"
+    
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Required for SharedArrayBuffer
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
