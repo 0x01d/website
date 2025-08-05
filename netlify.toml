@@ -19,6 +19,11 @@
 
 # Headers for WASM and CORS
 [[headers]]
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
   for = "/*.wasm"
   [headers.values]
     Content-Type = "application/wasm"
@@ -40,3 +45,4 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+

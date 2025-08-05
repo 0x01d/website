@@ -10,6 +10,7 @@ mod intro;
 mod displays;
 mod splash;
 mod blog;
+mod about;
 mod tui_helpers;
 pub mod markdown_renderer;
 mod tool_mutation_observer;
@@ -21,6 +22,7 @@ use splash::SplashModel;
 use blog::BlogModel;
 use intro::IntroModel;
 use tool_mutation_observer::MutationObserverModel;
+use about::AboutModel;
 
 
 pub enum Msg {
@@ -48,6 +50,7 @@ pub struct App {
     pub current: Displays,
     splash: SplashModel,
     blog: BlogModel,
+    about: AboutModel,
     intro: IntroModel,
     mutation_observer: MutationObserverModel,
     window: Window,
@@ -65,6 +68,7 @@ impl App {
             intro: IntroModel::new(),
             splash: SplashModel::new(),
             blog: BlogModel::new(tx.clone(), rx.clone()),
+            about: AboutModel::new(),
             mutation_observer: MutationObserverModel::new(tx.clone()),
             window,
             listener: None,
@@ -143,6 +147,7 @@ impl App {
         match self.current {
             Displays::Splash => self.splash.view(frame),
             Displays::Blog => self.blog.view(frame),
+            Displays::About => self.about.view(frame),
             Displays::MutationObserver => self.mutation_observer.view(frame),
             _ => {}
         } 

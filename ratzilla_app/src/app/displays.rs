@@ -17,8 +17,8 @@ impl Displays {
             Displays::Blog,
             //Displays::Tools,
             Displays::MutationObserver,
-            Displays::Acknowledgements,
-            Displays::Contact,
+            //Displays::Acknowledgements,
+            //Displays::Contact,
             Displays::About,
         ]
         .into()

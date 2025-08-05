@@ -4,11 +4,11 @@
     "count": 2
   },
   {
-    "name": "second",
-    "count": 1
+    "name": "wasm",
+    "count": 2
   },
   {
-    "name": "wasm",
+    "name": "rust",
     "count": 2
   },
   {
@@ -16,7 +16,7 @@
     "count": 2
   },
   {
-    "name": "rust",
-    "count": 2
+    "name": "second",
+    "count": 1
   }
 ]
