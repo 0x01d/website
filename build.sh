@@ -34,4 +34,3 @@ echo "📦 Building WASM application..."
 trunk build --release
 
 echo "✅ Build complete!"
-ls -la dist/
