@@ -30,7 +30,7 @@ fn main() {
     let mut entries = Vec::new();
     let mut tags: HashMap<String, i32> = HashMap::new();
     tags.insert("All".to_string(), 0);
-    for entry in glob("blogs/*.md").unwrap() {
+    for entry in glob("../blogs/*.md").unwrap() {
         let path = entry.unwrap();
         let slug = path.file_name().unwrap().to_string_lossy().into_owned();
         println!("Parsing: {}", path.display());
@@ -48,7 +48,7 @@ fn main() {
             }
             entries.push(blog_entry);
             *tags.entry("All".to_string()).or_insert(0) += 1;
-            fs::write(format!("public/blogs/{}", slug), body.as_bytes()).unwrap();
+            fs::write(format!("../public/blogs/{}", slug), body.as_bytes()).unwrap();
         }
     }
 
@@ -68,8 +68,8 @@ fn main() {
 
     let json_entries = serde_json::to_string_pretty(&entries).unwrap();
     let json_tags = serde_json::to_string_pretty(&tags_vec).unwrap();
-    fs::write("public/blogs/index.json", json_entries.as_bytes()).unwrap();
-    fs::write("public/blogs/tags.json", json_tags.as_bytes()).unwrap();
+    fs::write("../public/blogs/index.json", json_entries.as_bytes()).unwrap();
+    fs::write("../public/blogs/tags.json", json_tags.as_bytes()).unwrap();
 }
 
 fn extract_frontmatter(content: &str) -> Option<(FrontMatter, String)> {

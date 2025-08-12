@@ -7,8 +7,9 @@ static MARKDOWN_CONTENT: &str = "
 # About
 
 
-Personal website/blog of Ruben Käller, a full stack software developer with an
-affinity for Linux and AI. The website is a Work In Progress.
+Personal website/blog of Ruben Käller, a full stack software developer with an affinity for Linux and AI. 
+
+The website is a Work In Progress.
 ";
 pub struct AboutModel {
     markdown_renderer: MarkdownRenderer

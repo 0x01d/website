@@ -51,7 +51,6 @@ pub struct BlogModel {
     active_pane: Pane,
     tx: flume::Sender<Msg>,
     rx: flume::Receiver<Msg>,
-    //pub loaded_blog: Option<Text<'static>>,
     pub loaded_blog: MarkdownRenderer,
 }
 
@@ -107,6 +106,13 @@ impl BlogModel {
                     self.tag_list_state.select(Some(new as usize));
                 }
 
+            }
+            Msg::ScrollVert(delta_row) => {
+                if delta_row > 0 {
+                    self.loaded_blog.scroll_up(delta_row as u16);
+                } else {
+                    self.loaded_blog.scroll_down(delta_row.abs() as u16);
+                }
             }
             Msg::LoadSubPath(ref path) => {
                 if let Some(slug) = path.split('/').next() {
@@ -288,8 +294,8 @@ impl BlogModel {
             .highlight_style(Style::default().bg(Color::Yellow).fg(Color::Black));
 
 
-        if let Some(blog) = &self.loaded_blog.loaded_blog {
-            let blog_paragraph = Paragraph::new(blog.to_owned())
+        if let Some(ref blog) = &self.loaded_blog.get_content().clone() {
+            let blog_paragraph = Paragraph::new(blog.to_owned().to_owned())
                 .scroll((self.loaded_blog.vertical_scroll as u16, 0))
                 .block(Block::default()
                     .title("Post")
@@ -303,7 +309,7 @@ impl BlogModel {
 
             f.render_widget(blog_paragraph, chunks[0]);
 
-            if let Some(mut bar) = self.scrollbar_state {
+            if let Some(mut bar) = self.loaded_blog.scrollbar_state {
                 f.render_stateful_widget(scrollbar, chunks[0].inner(Margin {vertical:1, horizontal:1}), &mut bar);
             }
 
@@ -315,36 +321,13 @@ impl BlogModel {
 
     pub fn parse_blog_text(&mut self, content: String) {
         self.loaded_blog.parse_blog_text(content);
-        /* use pulldown_cmark::{Event, Parser, TextMergeStream};
-
-        let iterator = TextMergeStream::new(Parser::new(&content));
-
-        let mut content_styled: Text = Text::default();
-        
-        for event in iterator {
-            let styled_span = Span::default();
-            match event {
-                Event::Text(text) => content_styled.extend(Text::from(text.to_string())),
-                Event::Start(html_tag) => {
-                    match html_tag {
-                        //pulldown_cmark::Tag::Paragraph => {},
-                        pulldown_cmark::Tag::CodeBlock(bkind) => {
-
-                        },
-                        pulldown_cmark::Tag::BlockQuote(_) => {},
-
-                        _ => {},
-                    }
-                }
-                Event::Code(code_content) => {
-
-                }
-                _ => {}
-            }
-        }       
-
-        //self.loaded_blog = Some(content_styled.clone());
-        self.scrollbar_state = Some(ScrollbarState::new(content_styled.height()).position(self.vertical_scroll)); */
+        //self.scrollbar_state = Some(ScrollbarState::new(self.loaded_blog.loaded_blog.clone().unwrap().height()).position(self.vertical_scroll)); 
+        if let Some(blog) = &self.loaded_blog.loaded_blog {
+            self.scrollbar_state = Some(
+                ScrollbarState::new(blog.height())
+                .position(self.vertical_scroll)
+            );
+        }
     }
 
     pub fn filter_blogs(&mut self, filter_tag: &str) {

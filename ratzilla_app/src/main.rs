@@ -16,7 +16,9 @@ use ratzilla::{
 
 
 fn main() -> io::Result<()> {
+    #[cfg(feature = "debug")]
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+
     let backend = CanvasBackend::new()?;
     let mut terminal = Terminal::new(backend)?;
     

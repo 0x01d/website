@@ -1,0 +1,21 @@
+[[hooks]]
+stage = "pre_build"
+command = "cargo"
+command_arguments = ["run", "--manifest-path", "../blog_gen/Cargo.toml"]
+
+[build]
+target = "index.html"
+dist = "../dist"
+public_url = "/"
+filehash = true
+inject_scripts = true
+offline = false 
+minify = "always"
+
+#[[hooks]]
+#stage = "post_build"
+#command = "sh"
+#command_arguments = [
+#    "-c",
+#    "for wasm in dist/*.wasm; do wasm-opt -O3 --enable-bulk-memory-opt --output \"$wasm.tmp\" \"$wasm\" && mv \"$wasm.tmp\" \"$wasm\"; done"
+#]

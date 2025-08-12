@@ -1,23 +1,11 @@
 [
   {
-    "title": "My First Post",
-    "slug": "my-first-post.md",
+    "title": "Optimizing rbn.dev's wasm binary.",
+    "slug": "optimizing-rbn-dev-for-size.md",
     "tags": [
       "wasm",
-      "rust",
-      "ratzilla"
+      "rust"
     ],
-    "date": "1337-07-21"
-  },
-  {
-    "title": "My Second Post",
-    "slug": "my-second-post.md",
-    "tags": [
-      "wasm",
-      "rust",
-      "ratzilla",
-      "second"
-    ],
-    "date": "2025-07-21"
+    "date": "2025-08-08"
   }
 ]

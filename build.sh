@@ -29,7 +29,7 @@ fi
 
 # Optional: Install wasm-opt for smaller binaries
 # cargo install wasm-opt
-
+cd ratzilla_app
 echo "📦 Building WASM application..."
 trunk build --release
 

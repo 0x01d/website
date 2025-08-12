@@ -41,7 +41,7 @@ web-sys = { version = "0.3.77",features = [
 ]} 
 js-sys = "0.3.77"
 wasm-bindgen = "0.2.100"
-console_error_panic_hook = "0.1.7"
+console_error_panic_hook = { version = "0.1.7", optional = true }
 wasm-bindgen-futures = "0.4.50"
 gloo = "0.11.0"
 gloo-net = "0.6.0"
@@ -53,3 +53,19 @@ syntect = { version = "5.2.0", default-features = false, features = [
 ] }
 pulldown-cmark = "0.13"
 chrono = { version = "0.4", features = ["serde"] }
+
+[features]
+default = []
+debug = ["console_error_panic_hook"]
+
+[profile.release]
+opt-level = "z"          # Optimize for size
+lto = true              # Link-time optimization
+codegen-units = 1       # Single codegen unit
+panic = "abort"         # Reduce panic handling code
+strip = true            # Strip symbols
+
+[unstable]
+# Requires the rust-src component. `rustup +nightly component add rust-src`
+build-std = ["std", "panic_abort"]
+build-std-features = ["panic_immediate_abort", "optimize_for_size"]

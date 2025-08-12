@@ -1,22 +1,14 @@
 [
   {
     "name": "All",
-    "count": 2
-  },
-  {
-    "name": "wasm",
-    "count": 2
+    "count": 1
   },
   {
     "name": "rust",
-    "count": 2
+    "count": 1
   },
   {
-    "name": "ratzilla",
-    "count": 2
-  },
-  {
-    "name": "second",
+    "name": "wasm",
     "count": 1
   }
 ]

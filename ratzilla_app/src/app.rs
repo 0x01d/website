@@ -44,6 +44,7 @@ pub enum Msg {
     GetReport,
     StartScan,
     ReturnMutationResult((Vec<(String, String)>, web_time::Instant)),
+    ScrollVert(i16),
 }
 
 pub struct App {
@@ -178,6 +179,7 @@ impl App {
         match mouse_event.kind{
             MouseEventKind::Moved => self.update(Msg::MouseMove((*x,*y))),
             MouseEventKind::ButtonUp(button) => self.update(Msg::MouseClick(button)),
+            MouseEventKind::Wheel{ delta_col, delta_row} => {self.update(Msg::ScrollVert(delta_row))},
             _ => {}
         }
 

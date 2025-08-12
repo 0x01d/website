@@ -47,8 +47,15 @@ impl MarkdownRenderer {
                         code_block_content.push_str(&text);
                     } else {
                         let current_style = *style_stack.last().unwrap_or(&Style::default());
-                        current_line.push(Span::styled(text.to_string(), current_style));
-                    }
+                        for word in text.split_whitespace() {
+                            let line_len = current_line.iter().map(|s| s.content.len()).sum::<usize>();
+                            if line_len > 0 && line_len + word.len() + 1 > 80 {
+                                content_styled.lines.push(Line::from(current_line.clone()));
+                                current_line.clear();
+                            }
+                            if !current_line.is_empty() { current_line.push(Span::styled(" ", current_style)); }
+                            current_line.push(Span::styled(word.to_string(), current_style));
+                        }                    }
                 }
 
                 Event::Code(code_content) => {
@@ -69,7 +76,7 @@ impl MarkdownRenderer {
 
                         Tag::Heading { level, .. } => {
                             self.flush_current_line(&mut current_line, &mut content_styled);
-                            
+
                             let heading_style = match level {
                                 pulldown_cmark::HeadingLevel::H1 => Style::default()
                                     .fg(Color::Cyan)
@@ -84,7 +91,7 @@ impl MarkdownRenderer {
                                     .fg(Color::Yellow)
                                     .add_modifier(Modifier::BOLD),
                             };
-                            
+
                             // Add heading prefix
                             let prefix = "#".repeat(level as usize);
                             current_line.push(Span::styled(format!("{} ", prefix), heading_style));
@@ -95,7 +102,7 @@ impl MarkdownRenderer {
                             self.flush_current_line(&mut current_line, &mut content_styled);
                             in_code_block = true;
                             code_block_content.clear();
-                            
+
                             code_block_lang = match kind {
                                 CodeBlockKind::Fenced(lang) => {
                                     if lang.is_empty() {
@@ -224,16 +231,16 @@ impl MarkdownRenderer {
         self.flush_current_line(&mut current_line, &mut content_styled);
 
         self.loaded_blog = Some(content_styled.clone());
-        
+
         // Update scrollbar state if available
         if let Some(ref mut scrollbar_state) = self.scrollbar_state {
             *scrollbar_state = ratatui::widgets::ScrollbarState::new(content_styled.height())
                 .position(self.vertical_scroll);
-        } else {
-            self.scrollbar_state = Some(
-                ratatui::widgets::ScrollbarState::new(content_styled.height())
+            } else {
+                self.scrollbar_state = Some(
+                    ratatui::widgets::ScrollbarState::new(content_styled.height())
                     .position(self.vertical_scroll)
-            );
+                );
         }
     }
 
@@ -252,14 +259,14 @@ impl MarkdownRenderer {
         if let Some(lang) = language {
             if let Ok(syntax) = self.syntax_set.find_syntax_by_extension(lang)
                 .or_else(|| self.syntax_set.find_syntax_by_name(lang))
-                .ok_or("Syntax not found") 
+                    .ok_or("Syntax not found") 
             {
                 let theme = &self.theme_set.themes["base16-ocean.dark"];
                 let mut highlighter = HighlightLines::new(syntax, theme);
 
                 for line in LinesWithEndings::from(code) {
                     let mut line_spans = vec![Span::styled("│ ", border_style)];
-                    
+
                     if let Ok(highlights) = highlighter.highlight_line(line, &self.syntax_set) {
                         for (style, text) in highlights {
                             let ratatui_style = self.syntect_to_ratatui_style(style);

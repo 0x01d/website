@@ -2,3 +2,5 @@
 /dist
 /pkg
 /dist-netlify-prod
+/ratzilla_app/target
+/blog_gen/target
