@@ -13,7 +13,7 @@ else
 fi
 
 echo "Rustup default stable"
-rustup default stable
+rustup default nightly
 
 # Add wasm target
 echo "Adding WASM target..."

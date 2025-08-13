@@ -73,18 +73,13 @@ build-std = ["std", "panic_abort"]
 build-std-features = ["panic_immediate_abort", "optimize_for_size"]
 ```
 
-This moved my size down to 1740636 bytes, great stuff.
+This moved my size down to 1740636 bytes, great stuff. But still over a Mb, so 
+un-acceptable for a simple blog. I do have the MutationObserver on there, it is
+a tool to detected which plugins have access to DOM and what globals are loaded
+in the window, it's rather useless to be honest, I just wanted to print cool
+stuff to my web terminal, hehe.. So let's use the unix philosophy and have one 
+tool that does one thing good. In my case, a blog that loads a TUI-themed blog 
+with blazing speeds. If I want to add a tool to the website I'll add it later 
+as a seperate wasm.
 
-Curiously when adding the following configs to optimize my size even further, it 
-grew to 1743583 bytes.
-```
-[profile.release.build-override]
-opt-level = "z"
-codegen-units = 1
 
-[profile.release.package."*"]  # All dependencies including std
-opt-level = "z"
-strip = true
-```
-
-So let's remove those again. And start looking at code changes.

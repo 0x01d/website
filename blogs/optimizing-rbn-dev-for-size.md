@@ -78,18 +78,57 @@ build-std = ["std", "panic_abort"]
 build-std-features = ["panic_immediate_abort", "optimize_for_size"]
 ```
 
-This moved my size down to 1740636 bytes, great stuff.
+Curiously when deploying to Netlify, it didn't do jack.. I forgot to update my
+build script to use the nightly toolchain. Here
 
-Curiously when adding the following configs to optimize my size even further, it 
-grew to 1743583 bytes.
+```bash
+#!/bin/bash
+set -e
+
+echo "🦀 Setting up Rust environment..."
+
+# Install Rust if not present
+if ! command -v cargo &> /dev/null; then
+    echo "Installing Rust..."
+    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+    source $HOME/.cargo/env
+else
+    echo "Rust already installed"
+fi
+
+echo "Rustup default stable"
+rustup default nightly
+
+# Add wasm target
+echo "Adding WASM target..."
+rustup target add wasm32-unknown-unknown
+
+# Install trunk if not present
+if ! command -v trunk &> /dev/null; then
+    echo "Installing trunk..."
+    cargo install trunk
+else
+    echo "Trunk already installed"
+fi
+
+# Optional: Install wasm-opt for smaller binaries
+# cargo install wasm-opt
+cd ratzilla_app
+echo "📦 Building WASM application..."
+trunk build --release
+
+echo "✅ Build complete!"
 ```
-[profile.release.build-override]
-opt-level = "z"
-codegen-units = 1
 
-[profile.release.package."*"]  # All dependencies including std
-opt-level = "z"
-strip = true
-```
+This moved my size down to 1740636 bytes, great stuff. But still over a Mb, so 
+un-acceptable for a simple blog. I do have the MutationObserver on there, it is
+a tool to detected which plugins have access to DOM and what globals are loaded
+in the window, it's rather useless to be honest, I just wanted to print cool
+stuff to my web terminal, hehe.. So let's use the unix philosophy and have one 
+tool that does one thing good. In my case, a blog that loads a TUI-themed blog 
+with blazing speeds. If I want to add a tool to the website I'll add them later 
+as a seperate wasm.
 
-So let's remove those again. And start looking at code changes.
+
+
+

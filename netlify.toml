@@ -5,7 +5,7 @@
 
 [build.environment]
   # Rust configuration
-  RUST_VERSION = "stable"
+  RUST_VERSION = "nightly"
   CARGO_HOME = "/opt/buildhome/.cargo"
   RUSTUP_HOME = "/opt/buildhome/.rustup"
   
