@@ -1,7 +1,7 @@
 [[hooks]]
 stage = "pre_build"
-command = "cargo"
-command_arguments = ["run", "--manifest-path", "../blog_gen/Cargo.toml"]
+command = "bash"
+command_arguments = ["../scripts/build_blog.sh"]
 
 [build]
 target = "index.html"

@@ -13,15 +13,11 @@ mod blog;
 mod about;
 mod tui_helpers;
 pub mod markdown_renderer;
-mod tool_mutation_observer;
-mod tools;
-//pub mod popstate_listener;
 
 use displays::Displays;
 use splash::SplashModel;
 use blog::BlogModel;
 use intro::IntroModel;
-use tool_mutation_observer::MutationObserverModel;
 use about::AboutModel;
 
 
@@ -41,9 +37,6 @@ pub enum Msg {
     ParseBlogText(String),
     MouseMove((u16,u16)),
     MouseClick(MouseButton),
-    GetReport,
-    StartScan,
-    ReturnMutationResult((Vec<(String, String)>, web_time::Instant)),
     ScrollVert(i16),
 }
 
@@ -53,7 +46,6 @@ pub struct App {
     blog: BlogModel,
     about: AboutModel,
     intro: IntroModel,
-    mutation_observer: MutationObserverModel,
     window: Window,
     pub listener: Option<EventListener>,
     tx: flume::Sender<Msg>,
@@ -70,7 +62,6 @@ impl App {
             splash: SplashModel::new(),
             blog: BlogModel::new(tx.clone(), rx.clone()),
             about: AboutModel::new(),
-            mutation_observer: MutationObserverModel::new(tx.clone()),
             window,
             listener: None,
             rx,
@@ -84,10 +75,6 @@ impl App {
                 self.current = s;
                 match s {
                     Displays::Blog => self.blog.loaded_blog.loaded_blog = None,
-                    Displays::MutationObserver => {
-                        self.mutation_observer.update(Msg::GetReport);
-                        self.mutation_observer.update(Msg::StartScan);
-                    }
                     _ => {}
                 }
                 return
@@ -137,9 +124,6 @@ impl App {
                     _ => self.blog.update(msg),
                 }
             }
-            Displays::MutationObserver => {
-                self.mutation_observer.update(msg);
-            }
             _ => {}
         }
     }
@@ -149,7 +133,6 @@ impl App {
             Displays::Splash => self.splash.view(frame),
             Displays::Blog => self.blog.view(frame),
             Displays::About => self.about.view(frame),
-            Displays::MutationObserver => self.mutation_observer.view(frame),
             _ => {}
         } 
         if let Some(msg) = self.rx.try_recv().ok() {

@@ -1,10 +1,21 @@
 [
   {
-    "title": "Optimizing rbn.dev's wasm binary.",
+    "title": "Optimizing rbn.dev's wasm binary. - Part 2: removing the bloat",
+    "slug": "optimizing-rbn-dev-for-size-part-2-removing-the-bloat.md",
+    "tags": [
+      "wasm",
+      "rust",
+      "configs"
+    ],
+    "date": "2025-08-08"
+  },
+  {
+    "title": "Optimizing rbn.dev's wasm binary. - Part 1 config",
     "slug": "optimizing-rbn-dev-for-size.md",
     "tags": [
       "wasm",
-      "rust"
+      "rust",
+      "configs"
     ],
     "date": "2025-08-08"
   }

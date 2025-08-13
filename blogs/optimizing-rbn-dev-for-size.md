@@ -1,6 +1,6 @@
 ---
-title: "Optimizing rbn.dev's wasm binary."
-tags: ["wasm", "rust"]
+title: "Optimizing rbn.dev's wasm binary. - Part 1 config"
+tags: ["wasm", "rust", "configs"]
 date: 2025-8-8
 ---
 
@@ -13,7 +13,7 @@ So first step was to install `twiggy` and analyze where the bloat is coming from
 On first run I noticed massive `.rodata` section and the function names taking up
 loads of space, even though I compiled in release mode. 
 
-```
+```bash
 [user@local rasm]$ twiggy top dist/rasm-572497de7343eb4_bg.wasm | head
  Shallow Bytes │ Shallow % │ Item
 ───────────────┼───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ So the first step was optimizing the build for size. Setting the following setti
 has managed to shave off 1mb off the bin. Woohoo! Performance wise nothing has 
 changed.
 
-```
+```toml
 [profile.release]
 opt-level = "z"          # Optimize for size
 lto = true              # Link-time optimization
@@ -70,16 +70,29 @@ that it has a bunch of file-paths from my local machine in there:
 ```
 
 So I went for the nuclear option and removed the panic handler completely with
-the following configuration:
+the following configuration in `.config.toml`:
+
 ```toml
+[target.wasm32-unknown-unknown]
+rustflags = [
+    "-C", "panic=abort",
+    "-C", "opt-level=z",
+    #"-C", "lto=true",
+    "--remap-path-prefix=/home/user=~",
+]
+
 [unstable]
 # Requires the rust-src component. `rustup +nightly component add rust-src`
 build-std = ["std", "panic_abort"]
 build-std-features = ["panic_immediate_abort", "optimize_for_size"]
 ```
+This will build core and std, instead of using the default version and it'll
+remove the panic handler, completely.
 
 Curiously when deploying to Netlify, it didn't do jack.. I forgot to update my
-build script to use the nightly toolchain. Here
+build script to use the nightly toolchain. build-std only works on nightly ;)
+
+Here's the build script, for reference:
 
 ```bash
 #!/bin/bash
@@ -129,6 +142,23 @@ tool that does one thing good. In my case, a blog that loads a TUI-themed blog
 with blazing speeds. If I want to add a tool to the website I'll add them later 
 as a seperate wasm.
 
+> Note: While writing this blog I fixed scrolling functionality which upped the
+> size to 1.9Mb again.
 
+Yay! Removing the Useless tool shrank size to 1671881 bytes. Let's check which
+dependencies are unused to see if we can shave off a bit more. For this I can 
+use `cargo-machete`!
 
+```bash
+[user@local ratzilla_app]$ cargo machete
+Analyzing dependencies of crates in this directory...
+cargo-machete found the following unused dependencies in this directory:
+rasm -- ./Cargo.toml:
+	color-eyre
+	js-sys
+```
 
+So that only found two, I know for a fact there is more we can do, so let's go 
+the manual way and comment out, compile, repeat. This didn't seem to change the 
+bytes amount. So instead let's focus on code. Since this blog post is all over 
+the place already. Let's keep that one for part 2.

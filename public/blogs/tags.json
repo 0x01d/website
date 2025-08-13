@@ -1,14 +1,18 @@
 [
   {
     "name": "All",
-    "count": 1
+    "count": 2
   },
   {
     "name": "wasm",
-    "count": 1
+    "count": 2
   },
   {
     "name": "rust",
-    "count": 1
+    "count": 2
+  },
+  {
+    "name": "configs",
+    "count": 2
   }
 ]
