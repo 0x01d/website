@@ -12,6 +12,7 @@ else
     echo "Rust already installed"
 fi
 
+rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
 echo "Rustup default stable"
 rustup default nightly
 
