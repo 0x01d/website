@@ -33,7 +33,7 @@ syntect = { version = "5.2.0", default-features = false, features = [
     "default-fancy",
 ] }
 pulldown-cmark = "0.13"
-#chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 
 [features]
 default = []
