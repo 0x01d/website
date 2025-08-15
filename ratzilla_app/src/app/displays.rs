@@ -16,7 +16,7 @@ impl Displays {
         [
             Displays::Blog,
             //Displays::Tools,
-            Displays::MutationObserver,
+            //Displays::MutationObserver,
             //Displays::Acknowledgements,
             //Displays::Contact,
             Displays::About,
