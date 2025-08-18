@@ -9,17 +9,17 @@ On first run I noticed massive `.rodata` section and the function names taking u
 loads of space, even though I compiled in release mode. 
 
 ```bash
-[user@local rasm]$ twiggy top dist/rasm-572497de7343eb4_bg.wasm | head
- Shallow Bytes │ Shallow % │ Item
-───────────────┼───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-       1024490 ┊    34.35% ┊ data segment ".rodata"
-        280760 ┊     9.41% ┊ "function names" subsection
-         77975 ┊     2.61% ┊ regex_automata::meta::strategy::new::h39624e35bccabf79
-         16240 ┊     0.54% ┊ pulldown_cmark::firstpass::FirstPass::parse_block::hb2a6949987e47973
-         14091 ┊     0.47% ┊ rasm::app::tools::window_scanner::DeepExtensionScanner::run_deep_scan::h78a6f21ae37a5d2b
-         13787 ┊     0.46% ┊ <regex_syntax::hir::translate::TranslatorI as regex_syntax::ast::visitor::Visitor>::visit_post::h8ddeb8ef2542ff44
-         13698 ┊     0.46% ┊ regex_automata::nfa::thompson::compiler::Compiler::c::h88f7778e36c6a21b
-         12681 ┊     0.43% ┊ regex_automata::hybrid::search::find_fwd::h7167a838aa9d1335
+§c§[user@local§/§ rasm]$ twiggy top dist/rasm-572497de7343eb4_bg.wasm | §c§head§/§
+ §c§Shallow§/§ Bytes │ Shallow % │ Item
+§c§───────────────┼───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────§/§
+       §c§1024490§/§ ┊    34.35% ┊ data segment "§s§.rodata§/§"
+        §c§280760§/§ ┊     9.41% ┊ "§s§function names§/§" subsection
+         §c§77975§/§ ┊     2.61% ┊ regex_automata::meta::strategy::new::h39624e35bccabf79
+         §c§16240§/§ ┊     0.54% ┊ pulldown_cmark::firstpass::FirstPass::parse_block::hb2a6949987e47973
+         §c§14091§/§ ┊     0.47% ┊ rasm::app::tools::window_scanner::DeepExtensionScanner::run_deep_scan::h78a6f21ae37a5d2b
+         §c§13787§/§ ┊     0.46% ┊ <regex_syntax::hir::translate::TranslatorI as regex_syntax::ast::visitor::Visitor>::visit_post::h8ddeb8ef2542ff44
+         §c§13698§/§ ┊     0.46% ┊ regex_automata::nfa::thompson::compiler::Compiler::c::h88f7778e36c6a21b
+         §c§12681§/§ ┊     0.43% ┊ regex_automata::hybrid::search::find_fwd::h7167a838aa9d1335
 ```
 
 The second thing to note is the `regex_automata` is the biggest bloat in the bin
@@ -90,42 +90,42 @@ build script to use the nightly toolchain. build-std only works on nightly ;)
 Here's the build script, for reference:
 
 ```bash
-#!/bin/bash
-set -e
+§c§#§/§§c§!/bin/bash§/§§c§
+§/§§t§set§/§ -e
 
-echo "🦀 Setting up Rust environment..."
+§t§echo§/§ "§s§🦀 Setting up Rust environment...§/§"
 
-# Install Rust if not present
-if ! command -v cargo &> /dev/null; then
-    echo "Installing Rust..."
-    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-    source $HOME/.cargo/env
-else
-    echo "Rust already installed"
-fi
+§c§#§/§§c§ Install Rust if not present§/§§c§
+§/§§k§if§/§ ! §t§command§/§ -v cargo &> /dev/null; §k§then§/§
+    §t§echo§/§ "§s§Installing Rust...§/§"
+    §c§curl§/§ https://sh.rustup.rs -sSf | §c§sh§/§ -s -- -y --default-toolchain stable
+    §t§source§/§ $HOME/.cargo/env
+§k§else§/§
+    §t§echo§/§ "§s§Rust already installed§/§"
+§k§fi§/§
 
-echo "Rustup default stable"
-rustup default nightly
+§t§echo§/§ "§s§Rustup default stable§/§"
+§c§rustup§/§ default nightly
 
-# Add wasm target
-echo "Adding WASM target..."
-rustup target add wasm32-unknown-unknown
+§c§#§/§§c§ Add wasm target§/§§c§
+§/§§t§echo§/§ "§s§Adding WASM target...§/§"
+§c§rustup§/§ target add wasm32-unknown-unknown
 
-# Install trunk if not present
-if ! command -v trunk &> /dev/null; then
-    echo "Installing trunk..."
-    cargo install trunk
-else
-    echo "Trunk already installed"
-fi
+§c§#§/§§c§ Install trunk if not present§/§§c§
+§/§§k§if§/§ ! §t§command§/§ -v trunk &> /dev/null; §k§then§/§
+    §t§echo§/§ "§s§Installing trunk...§/§"
+    §c§cargo§/§ install trunk
+§k§else§/§
+    §t§echo§/§ "§s§Trunk already installed§/§"
+§k§fi§/§
 
-# Optional: Install wasm-opt for smaller binaries
-# cargo install wasm-opt
-cd ratzilla_app
-echo "📦 Building WASM application..."
-trunk build --release
+§c§#§/§§c§ Optional: Install wasm-opt for smaller binaries§/§§c§
+§/§§c§#§/§§c§ cargo install wasm-opt§/§§c§
+§/§§t§cd§/§ ratzilla_app
+§t§echo§/§ "§s§📦 Building WASM application...§/§"
+§c§trunk§/§ build --release
 
-echo "✅ Build complete!"
+§t§echo§/§ "§s§✅ Build complete!§/§"
 ```
 
 This moved my size down to 1740636 bytes, great stuff. But still over a Mb, so 
@@ -145,12 +145,12 @@ dependencies are unused to see if we can shave off a bit more. For this I can
 use `cargo-machete`!
 
 ```bash
-[user@local ratzilla_app]$ cargo machete
-Analyzing dependencies of crates in this directory...
-cargo-machete found the following unused dependencies in this directory:
-rasm -- ./Cargo.toml:
-	color-eyre
-	js-sys
+§c§[user@local§/§ ratzilla_app]$ cargo machete
+§c§Analyzing§/§ dependencies of crates in this directory...
+§c§cargo-machete§/§ found the following unused dependencies in this directory:
+§c§rasm§/§ -- ./Cargo.toml:
+	§c§color-eyre§/§
+	§c§js-sys§/§
 ```
 
 So that only found two, I know for a fact there is more we can do, so let's go 

@@ -6,27 +6,25 @@ use ratatui::{
     Frame,
 };
 use wasm_bindgen_futures::spawn_local;
-use serde::{Deserialize, Serialize};
 use gloo_net::http::Request;
-use chrono::NaiveDate;
 use web_sys::console;
 use wasm_bindgen::JsValue;
 
 use crate::app::markdown_renderer::MarkdownRenderer;
 use crate::app::Msg;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Tag {
-    name: String,
-    count: u32,
+    pub name: String,
+    pub count: u32,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct BlogEntry {
-    title: String,
-    slug: String,
-    tags: Vec<String>,
-    date: NaiveDate,
+    pub title: String,
+    pub slug: String,
+    pub tags: Vec<String>,
+    pub date: String,  // Keep as String for simplicity in client
 }
 
 enum Pane {
@@ -126,13 +124,11 @@ impl BlogModel {
 
             }
             Msg::LoadHash(ref hash) => {
-                //console::log_1(&hash.into());
                 if hash.is_empty() { return }
                 let tag = hash.trim_start_matches("#");
                 self.filter_blogs(&tag);
             }
             Msg::NavigateBack => { 
-                //TODO: Unify behaviour with back btn.
                 if self.loaded_blog.loaded_blog.is_none() {
                     if let Some(history) = web_sys::window().and_then(|w| w.history().ok()) {
                         let _ = history.push_state_with_url(&JsValue::NULL, "", Some("~"));
@@ -176,7 +172,6 @@ impl BlogModel {
                         }
                         self.filter_blogs(&sel.name);
                         self.loaded_blog.loaded_blog = None;
-                        //Self::fetch_blog(sel.slug.to_string(), self.tx.clone())
                     }
                     Msg::MouseClick(btn) => {
                         if self.mouse_coords.1 < self.tag_list_rect.y + 1 + self.tag_list.len() as u16 {
@@ -263,17 +258,14 @@ impl BlogModel {
             let title_span = Span::styled(&blog.title, Style::default().fg(Color::White));
             let date_span = Span::styled(format!(" - [{}] - ", blog.date), Style::default().fg(Color::White));
 
-            // Tags with background, spaces without
             let mut tag_spans: Vec<Span> = Vec::new();
             for (i, tag) in blog.tags.iter().enumerate() {
                 tag_spans.push(Span::styled(
                         format!("#{}", tag),
                         Style::default()
                         .fg(Color::Cyan)
-                        //.bg(),
                 ));
 
-                // Add raw unstyled space *after* each tag except the last
                 if i < blog.tags.len() - 1 {
                     tag_spans.push(Span::raw(" "));
                 }
@@ -321,7 +313,6 @@ impl BlogModel {
 
     pub fn parse_blog_text(&mut self, content: String) {
         self.loaded_blog.parse_blog_text(content);
-        //self.scrollbar_state = Some(ScrollbarState::new(self.loaded_blog.loaded_blog.clone().unwrap().height()).position(self.vertical_scroll)); 
         if let Some(blog) = &self.loaded_blog.loaded_blog {
             self.scrollbar_state = Some(
                 ScrollbarState::new(blog.height())
@@ -367,11 +358,9 @@ impl BlogModel {
                         match response.text().await {
                             Ok(text) => {
                                 console::log_1(&format!("Fetched tags: {}", text).into());
-                                let tag_list: Option<Vec<Tag>> = serde_json::from_str(&text.to_string()).ok();
-                                if let Some(tags) = tag_list {
+                                if let Some(tags) = parse_tags_json(&text) {
                                     let _ = tx_clone.try_send(Msg::UpdateBlogTags(tags));
                                 }
-
                             }
                             Err(err) => {
                                 console::error_1(&format!("Failed to read response body: {:?}", err).into());
@@ -399,11 +388,9 @@ impl BlogModel {
                         match response.text().await {
                             Ok(text) => {
                                 console::log_1(&format!("Fetched index: {}", text).into());
-                                let blog_list: Option<Vec<BlogEntry>> = serde_json::from_str(&text.to_string()).ok();
-                                if let Some(blogs) = blog_list {
+                                if let Some(blogs) = parse_blog_index_json(&text) {
                                     let _ = tx_clone.try_send(Msg::UpdateBlogIndex(blogs));
                                 }
-
                             }
                             Err(err) => {
                                 console::error_1(&format!("Failed to read response body: {:?}", err).into());
@@ -418,7 +405,6 @@ impl BlogModel {
                 }
             }
         });
-
     }
 
     pub fn fetch_blog(slug: String, tx: flume::Sender<Msg>) {
@@ -445,7 +431,108 @@ impl BlogModel {
                 }
             }
         });
-
     }
 }
 
+// Simple JSON parsing without serde
+fn parse_tags_json(json: &str) -> Option<Vec<Tag>> {
+    let mut tags = Vec::new();
+    
+    // Remove array brackets and split by objects
+    let content = json.trim().trim_start_matches('[').trim_end_matches(']');
+    
+    for obj in content.split("},") {
+        let obj = if obj.ends_with('}') { obj } else { &format!("{}}}", obj) };
+        
+        let mut name = String::new();
+        let mut count = 0;
+        
+        for line in obj.lines() {
+            if let Some(n) = extract_json_string(line, "name") {
+                name = n;
+            } else if let Some(c) = extract_json_number(line, "count") {
+                count = c;
+            }
+        }
+        
+        if !name.is_empty() {
+            tags.push(Tag { name, count });
+        }
+    }
+    
+    Some(tags)
+}
+
+fn parse_blog_index_json(json: &str) -> Option<Vec<BlogEntry>> {
+    let mut entries = Vec::new();
+    
+    let content = json.trim().trim_start_matches('[').trim_end_matches(']');
+    
+    for obj in content.split("},") {
+        let obj = if obj.ends_with('}') { obj } else { &format!("{}}}", obj) };
+        
+        let mut title = String::new();
+        let mut slug = String::new();
+        let mut tags = Vec::new();
+        let mut date = String::new();
+        let mut lines = obj.lines();
+
+        while let Some(line) = lines.next() {
+            if let Some(t) = extract_json_string(line, "title") {
+                title = t;
+            } else if let Some(s) = extract_json_string(line, "slug") {
+                slug = s;
+            } else if let Some(d) = extract_json_string(line, "date") {
+                date = d;
+            } else if line.contains("\"tags\"") {
+                // Now gather tags until we hit a closing ']'
+                while let Some(tag_line) = lines.next() {
+                    if tag_line.contains("]") {
+                        break;
+                    }
+
+                    // Each tag line looks like:  "wasm", or "rust",
+                    // so strip whitespace, commas, and quotes
+                    let cleaned = tag_line
+                        .trim()
+                        .trim_end_matches(',')
+                        .trim_matches('"');
+
+                    if !cleaned.is_empty() {
+                        tags.push(cleaned.to_string());
+                    }
+                }
+            }
+        }        
+        if !title.is_empty() && !slug.is_empty() {
+            entries.push(BlogEntry { title, slug, tags, date });
+        }
+    }
+
+    Some(entries)
+}
+
+fn extract_json_string(line: &str, key: &str) -> Option<String> {
+    let pattern = format!("\"{}\"", key);
+    if line.contains(&pattern) {
+        if let Some(start) = line.find(": \"") {
+            let value_start = start + 3;
+            if let Some(end) = line[value_start..].find('"') {
+                return Some(line[value_start..value_start + end].to_string());
+            }
+        }
+    }
+    None
+}
+
+fn extract_json_number(line: &str, key: &str) -> Option<u32> {
+    let pattern = format!("\"{}\"", key);
+    if line.contains(&pattern) {
+        if let Some(start) = line.find(": ") {
+            let value_start = start + 2;
+            let value_str = line[value_start..].trim().trim_end_matches(',');
+            return value_str.parse().ok();
+        }
+    }
+    None
+}

@@ -3,16 +3,8 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
 };
-use syntect::{
-    easy::HighlightLines,
-    highlighting::{ThemeSet, Style as SyntectStyle},
-    parsing::SyntaxSet,
-    util::LinesWithEndings,
-};
 
 pub struct MarkdownRenderer {
-    syntax_set: SyntaxSet,
-    theme_set: ThemeSet,
     pub loaded_blog: Option<Text<'static>>,
     pub scrollbar_state: Option<ratatui::widgets::ScrollbarState>,
     pub vertical_scroll: usize,
@@ -21,8 +13,6 @@ pub struct MarkdownRenderer {
 impl MarkdownRenderer {
     pub fn new() -> Self {
         Self {
-            syntax_set: SyntaxSet::load_defaults_newlines(),
-            theme_set: ThemeSet::load_defaults(),
             loaded_blog: None,
             scrollbar_state: None,
             vertical_scroll: 0,
@@ -55,7 +45,8 @@ impl MarkdownRenderer {
                             }
                             if !current_line.is_empty() { current_line.push(Span::styled(" ", current_style)); }
                             current_line.push(Span::styled(word.to_string(), current_style));
-                        }                    }
+                        }
+                    }
                 }
 
                 Event::Code(code_content) => {
@@ -92,7 +83,6 @@ impl MarkdownRenderer {
                                     .add_modifier(Modifier::BOLD),
                             };
 
-                            // Add heading prefix
                             let prefix = "#".repeat(level as usize);
                             current_line.push(Span::styled(format!("{} ", prefix), heading_style));
                             style_stack.push(heading_style);
@@ -165,20 +155,20 @@ impl MarkdownRenderer {
                     match tag {
                         TagEnd::Paragraph => {
                             self.flush_current_line(&mut current_line, &mut content_styled);
-                            content_styled.extend(Text::from(Line::from(""))); // Add blank line after paragraph
+                            content_styled.extend(Text::from(Line::from("")));
                         }
 
                         TagEnd::Heading { .. } => {
                             self.flush_current_line(&mut current_line, &mut content_styled);
-                            content_styled.extend(Text::from(Line::from(""))); // Add blank line after heading
+                            content_styled.extend(Text::from(Line::from("")));
                             style_stack.pop();
                         }
 
                         TagEnd::CodeBlock => {
                             if in_code_block {
-                                self.render_code_block(&code_block_content, &code_block_lang, &mut content_styled);
+                                self.render_highlighted_code_block(&code_block_content, &mut content_styled);
                                 in_code_block = false;
-                                content_styled.extend(Text::from(Line::from(""))); // Add blank line after code block
+                                content_styled.extend(Text::from(Line::from("")));
                             }
                         }
 
@@ -186,13 +176,13 @@ impl MarkdownRenderer {
                             self.flush_current_line(&mut current_line, &mut content_styled);
                             in_blockquote = false;
                             style_stack.pop();
-                            content_styled.extend(Text::from(Line::from(""))); // Add blank line after blockquote
+                            content_styled.extend(Text::from(Line::from("")));
                         }
 
                         TagEnd::List(_) => {
                             list_depth = list_depth.saturating_sub(1);
                             if list_depth == 0 {
-                                content_styled.extend(Text::from(Line::from(""))); // Add blank line after list
+                                content_styled.extend(Text::from(Line::from("")));
                             }
                         }
 
@@ -236,11 +226,11 @@ impl MarkdownRenderer {
         if let Some(ref mut scrollbar_state) = self.scrollbar_state {
             *scrollbar_state = ratatui::widgets::ScrollbarState::new(content_styled.height())
                 .position(self.vertical_scroll);
-            } else {
-                self.scrollbar_state = Some(
-                    ratatui::widgets::ScrollbarState::new(content_styled.height())
+        } else {
+            self.scrollbar_state = Some(
+                ratatui::widgets::ScrollbarState::new(content_styled.height())
                     .position(self.vertical_scroll)
-                );
+            );
         }
     }
 
@@ -251,79 +241,115 @@ impl MarkdownRenderer {
         }
     }
 
-    fn render_code_block(&self, code: &str, language: &Option<String>, content_styled: &mut Text) {
+    fn render_highlighted_code_block(&self, code: &str, content_styled: &mut Text) {
         // Add top border
         let border_style = Style::default().fg(Color::Gray);
         content_styled.extend(Text::from(Line::from(Span::styled("┌─────────────────", border_style))));
 
-        if let Some(lang) = language {
-            if let Ok(syntax) = self.syntax_set.find_syntax_by_extension(lang)
-                .or_else(|| self.syntax_set.find_syntax_by_name(lang))
-                    .ok_or("Syntax not found") 
-            {
-                let theme = &self.theme_set.themes["base16-ocean.dark"];
-                let mut highlighter = HighlightLines::new(syntax, theme);
-
-                for line in LinesWithEndings::from(code) {
-                    let mut line_spans = vec![Span::styled("│ ", border_style)];
-
-                    if let Ok(highlights) = highlighter.highlight_line(line, &self.syntax_set) {
-                        for (style, text) in highlights {
-                            let ratatui_style = self.syntect_to_ratatui_style(style);
-                            line_spans.push(Span::styled(text.to_string(), ratatui_style));
+        // Parse the highlighted code with inline tokens
+        for line in code.lines() {
+            let mut line_spans = vec![Span::styled("│ ", border_style)];
+            
+            let mut chars = line.chars().peekable();
+            let mut current_text = String::new();
+            
+            while let Some(ch) = chars.next() {
+                if ch == '§' {
+                    // Start of a token - first add any accumulated text
+                    if !current_text.is_empty() {
+                        line_spans.push(Span::styled(
+                            current_text.clone(),
+                            Style::default().fg(Color::Rgb(220, 220, 220))
+                        ));
+                        current_text.clear();
+                    }
+                    
+                    // Parse the style code
+                    if let Some(style_code) = chars.next() {
+                        // Skip the second §
+                        if chars.next() == Some('§') {
+                            // Read until §/§
+                            let mut token_text = String::new();
+                            let mut found_end = false;
+                            
+                            while let Some(ch) = chars.next() {
+                                if ch == '§' {
+                                    // Check if this is the end marker
+                                    if chars.peek() == Some(&'/') {
+                                        chars.next(); // consume '/'
+                                        if chars.next() == Some('§') {
+                                            found_end = true;
+                                            break;
+                                        }
+                                    } else {
+                                        token_text.push(ch);
+                                    }
+                                } else {
+                                    token_text.push(ch);
+                                }
+                            }
+                            
+                            if found_end {
+                                let style = self.code_to_style(style_code);
+                                line_spans.push(Span::styled(token_text, style));
+                            } else {
+                                // Malformed token, just add as plain text
+                                current_text.push('§');
+                                current_text.push(style_code);
+                                current_text.push('§');
+                                current_text.push_str(&token_text);
+                            }
+                        } else {
+                            // Malformed token
+                            current_text.push('§');
+                            current_text.push(style_code);
                         }
                     } else {
-                        // Fallback to plain text if highlighting fails
-                        line_spans.push(Span::raw(line.to_string()));
+                        // Just a lone §
+                        current_text.push('§');
                     }
-
-                    content_styled.extend(Text::from(Line::from(line_spans)));
+                } else {
+                    current_text.push(ch);
                 }
-            } else {
-                // Fallback for unknown languages
-                self.render_plain_code_block(code, content_styled, border_style);
             }
-        } else {
-            // No language specified, render as plain text
-            self.render_plain_code_block(code, content_styled, border_style);
+            
+            // Add any remaining text
+            if !current_text.is_empty() {
+                line_spans.push(Span::styled(
+                    current_text,
+                    Style::default().fg(Color::Rgb(220, 220, 220))
+                ));
+            }
+            
+            content_styled.extend(Text::from(Line::from(line_spans)));
         }
 
         // Add bottom border
         content_styled.extend(Text::from(Line::from(Span::styled("└─────────────────", border_style))));
     }
 
-    fn render_plain_code_block(&self, code: &str, content_styled: &mut Text, border_style: Style) {
-        let code_style = Style::default()
-            .bg(Color::Rgb(40, 40, 40))
-            .fg(Color::Rgb(220, 220, 220));
-
-        for line in code.lines() {
-            let mut line_spans = vec![Span::styled("│ ", border_style)];
-            line_spans.push(Span::styled(line.to_string(), code_style));
-            content_styled.extend(Text::from(Line::from(line_spans)));
+    fn code_to_style(&self, code: char) -> Style {
+        match code {
+            'k' => Style::default()
+                .fg(Color::Rgb(183, 101, 235))  // Purple for keywords
+                .add_modifier(Modifier::BOLD),
+            's' => Style::default()
+                .fg(Color::Rgb(163, 190, 140)),  // Green for strings
+            'c' => Style::default()
+                .fg(Color::Rgb(143, 161, 179))  // Gray for comments
+                .add_modifier(Modifier::ITALIC),
+            'n' => Style::default()
+                .fg(Color::Rgb(208, 135, 112)),  // Orange for numbers
+            'f' => Style::default()
+                .fg(Color::Rgb(235, 203, 139))  // Yellow for functions
+                .add_modifier(Modifier::BOLD),
+            't' => Style::default()
+                .fg(Color::Rgb(143, 188, 187)),  // Cyan for types/classes
+            'o' => Style::default()
+                .fg(Color::Rgb(216, 222, 233)),  // Light gray for operators
+            _ => Style::default()
+                .fg(Color::Rgb(220, 220, 220)),  // Default white
         }
-    }
-
-    fn syntect_to_ratatui_style(&self, syntect_style: SyntectStyle) -> Style {
-        let fg_color = Color::Rgb(
-            syntect_style.foreground.r,
-            syntect_style.foreground.g,
-            syntect_style.foreground.b,
-        );
-
-        let mut style = Style::default().fg(fg_color);
-
-        if syntect_style.font_style.contains(syntect::highlighting::FontStyle::BOLD) {
-            style = style.add_modifier(Modifier::BOLD);
-        }
-        if syntect_style.font_style.contains(syntect::highlighting::FontStyle::ITALIC) {
-            style = style.add_modifier(Modifier::ITALIC);
-        }
-        if syntect_style.font_style.contains(syntect::highlighting::FontStyle::UNDERLINE) {
-            style = style.add_modifier(Modifier::UNDERLINED);
-        }
-
-        style
     }
 
     pub fn scroll_up(&mut self, lines: u16) {

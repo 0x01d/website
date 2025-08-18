@@ -1,18 +1,34 @@
 [
   {
     "name": "All",
+    "count": 3
+  },
+  {
+    "name": "shenanigans",
+    "count": 1
+  },
+  {
+    "name": "configs",
     "count": 2
+  },
+  {
+    "name": "AI",
+    "count": 1
   },
   {
     "name": "wasm",
     "count": 2
   },
   {
-    "name": "rust",
-    "count": 2
+    "name": "security",
+    "count": 1
   },
   {
-    "name": "configs",
+    "name": "prompt-injection",
+    "count": 1
+  },
+  {
+    "name": "rust",
     "count": 2
   }
 ]

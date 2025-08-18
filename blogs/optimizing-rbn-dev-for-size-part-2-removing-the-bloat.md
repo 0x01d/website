@@ -13,12 +13,6 @@ Let's start with serde and see what we can do:
 
 ```
 [user@local ratzilla_app]$ cargo tree --invert serde
-error: invalid character `{` in package name: `{{project-name}}`, the first character must be a Unicode XID start character (most letters or `_`)
- --> ../../../../.cargo/git/checkouts/ratzilla-2a32382e04d0efe9/a6777cb/templates/simple/Cargo.toml:2:8
-  |
-2 | name = "{{project-name}}"
-  |        ^^^^^^^^^^^^^^^^^^
-  |
 serde v1.0.219
 ├── bincode v1.3.3
 │   ├── gloo-worker v0.5.0
@@ -70,9 +64,15 @@ The problem I have is that I don't know of any other lib for code-highlighting
 that is better.
 
 Then one has to ask himself, what is the benefit of code-highlighting on the 
-client. What if I could have the code highlighted during the blog generation
-step? Since I already use a blog generation step to parse all the tags and split
-the metadata from the markdown. This would drastically reduce the binary size.
+client. Since I already use a blog generation step to parse all the blogs and
+tags.
 
-The only problem then is that I use `cmark_pulldown` a markdown parser, and
-markdown doesn't have colors. Let me ponder a bit.
+So I decided to tokenize using syntect in the build step and parse the tokens 
+manually on the client inside the wasm. I feel stupid that I didn't think of
+this before implementing a syntax parser on the frontend -lol sometimes you need
+to think before acting ;).
+
+I prompted claude to remove the dependencies on syntect and serde, it did a 
+remarkably good job at removing serde and syntect from the deps. But in the 
+meantime it broke some functionality of the tags system. Let me fix that quickly
+and keep going with removing bloateru.

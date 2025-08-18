@@ -1,5 +1,16 @@
 [
   {
+    "title": "Your AI Has No Clothes: Why Prompt Injection is Everyone's Problem",
+    "slug": "midlife-crisis.md",
+    "tags": [
+      "security",
+      "AI",
+      "prompt-injection",
+      "shenanigans"
+    ],
+    "date": "2025-08-15"
+  },
+  {
     "title": "Optimizing rbn.dev's wasm binary. - Part 2: removing the bloat",
     "slug": "optimizing-rbn-dev-for-size-part-2-removing-the-bloat.md",
     "tags": [
