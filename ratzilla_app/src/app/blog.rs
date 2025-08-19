@@ -6,10 +6,11 @@ use ratatui::{
     Frame,
 };
 use wasm_bindgen_futures::spawn_local;
-use gloo_net::http::Request;
+//use gloo_net::http::Request;
 use web_sys::console;
 use wasm_bindgen::JsValue;
 
+use crate::app::web_sys_helpers::fetch_url;
 use crate::app::markdown_renderer::MarkdownRenderer;
 use crate::app::Msg;
 
@@ -349,25 +350,14 @@ impl BlogModel {
 
     pub fn fetch_tags(&mut self) {
         let tx_clone = self.tx.clone();
-        spawn_local(async move{
+        spawn_local(async move {
             let url = "/public/blogs/tags.json";
-
-            match Request::get(url).send().await {
-                Ok(response) => {
-                    if response.ok() {
-                        match response.text().await {
-                            Ok(text) => {
-                                console::log_1(&format!("Fetched tags: {}", text).into());
-                                if let Some(tags) = parse_tags_json(&text) {
-                                    let _ = tx_clone.try_send(Msg::UpdateBlogTags(tags));
-                                }
-                            }
-                            Err(err) => {
-                                console::error_1(&format!("Failed to read response body: {:?}", err).into());
-                            }
-                        }
-                    } else {
-                        console::error_1(&format!("Request failed: {}", response.status()).into());
+            
+            match fetch_url(url).await {
+                Ok(text) => {
+                    console::log_1(&format!("Fetched tags: {}", text).into());
+                    if let Some(tags) = parse_tags_json(&text) {
+                        let _ = tx_clone.try_send(Msg::UpdateBlogTags(tags));
                     }
                 }
                 Err(err) => {
@@ -379,25 +369,14 @@ impl BlogModel {
 
     pub fn fetch_index(&mut self) {
         let tx_clone = self.tx.clone();
-        spawn_local(async move{
+        spawn_local(async move {
             let url = "/public/blogs/index.json";
-
-            match Request::get(url).send().await {
-                Ok(response) => {
-                    if response.ok() {
-                        match response.text().await {
-                            Ok(text) => {
-                                console::log_1(&format!("Fetched index: {}", text).into());
-                                if let Some(blogs) = parse_blog_index_json(&text) {
-                                    let _ = tx_clone.try_send(Msg::UpdateBlogIndex(blogs));
-                                }
-                            }
-                            Err(err) => {
-                                console::error_1(&format!("Failed to read response body: {:?}", err).into());
-                            }
-                        }
-                    } else {
-                        console::error_1(&format!("Request failed: {}", response.status()).into());
+            
+            match fetch_url(url).await {
+                Ok(text) => {
+                    console::log_1(&format!("Fetched index: {}", text).into());
+                    if let Some(blogs) = parse_blog_index_json(&text) {
+                        let _ = tx_clone.try_send(Msg::UpdateBlogIndex(blogs));
                     }
                 }
                 Err(err) => {
@@ -408,23 +387,12 @@ impl BlogModel {
     }
 
     pub fn fetch_blog(slug: String, tx: flume::Sender<Msg>) {
-        spawn_local(async move{
+        spawn_local(async move {
             let url = format!("/public/blogs/{}", slug);
-
-            match Request::get(&url).send().await {
-                Ok(response) => {
-                    if response.ok() {
-                        match response.text().await {
-                            Ok(text) => {
-                                let _ = tx.try_send(Msg::ParseBlogText(text));
-                            }
-                            Err(err) => {
-                                console::error_1(&format!("Failed to read response body: {:?}", err).into());
-                            }
-                        }
-                    } else {
-                        console::error_1(&format!("Request failed: {}", response.status()).into());
-                    }
+            
+            match fetch_url(&url).await {
+                Ok(text) => {
+                    let _ = tx.try_send(Msg::ParseBlogText(text));
                 }
                 Err(err) => {
                     console::error_1(&format!("Fetch error: {:?}", err).into());

@@ -1,0 +1,467 @@
+use ratatui::{
+    prelude::*,
+    widgets::Paragraph,
+    layout::Rect,
+    Frame,
+};
+use web_time::{Duration, Instant};
+
+static INTRO_ASCII: &'static str = r"                                 _____          
+        ______                  /\    \         
+       |::|   |                /::\    \        
+       |::|   |               /::::\    \       
+       |::|   |              /::::::\    \      
+       |::|   |             /:::/\:::\    \     
+       |::|   |            /:::/  \:::\    \    
+       |::|   |           /:::/    \:::\    \   
+       |::|   |          /:::/    / \:::\    \  
+ ______|::|___|___ ____ /:::/    /   \:::\ ___\ 
+|:::::::::::::::::|    /:::/____/     \:::|    |
+|:::::::::::::::::|____\:::\    \     /:::|____|
+ ~~~~~~|::|~~~|~~~      \:::\    \   /:::/    / 
+       |::|   |          \:::\    \ /:::/    /  
+       |::|   |           \:::\    /:::/    /   
+       |::|   |            \:::\  /:::/    /    
+       |::|   |             \:::\/:::/    /     
+       |::|   |              \::::::/    /      
+       |::|   |               \::::/    /       
+       |::|___|                \::/____/        
+        ~~                      ~~              
+";
+
+/// Direction for spiral animation
+#[derive(Clone, Copy)]
+pub enum SpiralDirection {
+    /// Start from center, spiral outward
+    OutwardFromCenter,
+    /// Start from outside, spiral inward
+    InwardToCenter,
+    /// Clockwise from top-left corner
+    ClockwiseFromCorner,
+}
+
+/// Spiral reveal effect for intro animation
+pub struct SpiralEffect {
+    duration_ms: u64,
+    elapsed_ms: u64,
+    reveal_order: Vec<(u16, u16)>,
+    direction: SpiralDirection,
+    initialized: bool,
+}
+
+impl SpiralEffect {
+    pub fn new(duration_ms: u64, direction: SpiralDirection) -> Self {
+        Self {
+            duration_ms,
+            elapsed_ms: 0,
+            reveal_order: Vec::new(),
+            direction,
+            initialized: false,
+        }
+    }
+
+    /// Generate spiral coordinates from center outward
+    fn generate_outward_spiral(&mut self, area: Rect) {
+        let width = area.width as i32;
+        let height = area.height as i32;
+        let center_x = area.left() as i32 + width / 2;
+        let center_y = area.top() as i32 + height / 2;
+        
+        let max_radius = ((width.pow(2) + height.pow(2)) as f32).sqrt() as i32 + 1;
+        
+        // Generate spiral using polar coordinates
+        let mut angle = 0.0f32;
+        let angle_step = 0.2; // Controls tightness of spiral
+        let radius_step = 0.5; // Controls spacing between rings
+        
+        let mut positions = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        
+        while positions.len() < (width * height) as usize {
+            let radius = angle * radius_step;
+            if radius > max_radius as f32 {
+                break;
+            }
+            
+            let x = center_x + (radius * angle.cos()) as i32;
+            let y = center_y + (radius * angle.sin()) as i32;
+            
+            // Check bounds and duplicates
+            if x >= area.left() as i32 
+                && x < area.right() as i32 
+                && y >= area.top() as i32 
+                && y < area.bottom() as i32 
+            {
+                let pos = (x as u16, y as u16);
+                if seen.insert(pos) {
+                    positions.push(pos);
+                }
+            }
+            
+            angle += angle_step;
+        }
+        
+        self.reveal_order = positions;
+    }
+
+    /// Generate spiral from corner (like peeling a rectangle)
+    fn generate_corner_spiral(&mut self, area: Rect) {
+        let mut positions = Vec::new();
+        
+        let mut left = area.left();
+        let mut right = area.right() - 1;
+        let mut top = area.top();
+        let mut bottom = area.bottom() - 1;
+        
+        while left <= right && top <= bottom {
+            // Top row: left to right
+            if top <= bottom {
+                for x in left..=right {
+                    positions.push((x, top));
+                }
+                top += 1;
+            }
+            
+            // Right column: top to bottom
+            if left <= right {
+                for y in top..=bottom {
+                    positions.push((right, y));
+                }
+                right = right.saturating_sub(1);
+            }
+            
+            // Bottom row: right to left
+            if top <= bottom && left <= right {
+                for x in (left..=right).rev() {
+                    positions.push((x, bottom));
+                }
+                bottom = bottom.saturating_sub(1);
+            }
+            
+            // Left column: bottom to top
+            if left <= right && top <= bottom {
+                for y in (top..=bottom).rev() {
+                    positions.push((left, y));
+                }
+                left += 1;
+            }
+        }
+        
+        self.reveal_order = positions;
+    }
+
+    /// Initialize reveal order based on direction
+    fn init_reveal_order(&mut self, area: Rect) {
+        if self.initialized {
+            return;
+        }
+        
+        match self.direction {
+            SpiralDirection::OutwardFromCenter => {
+                self.generate_outward_spiral(area);
+            }
+            SpiralDirection::InwardToCenter => {
+                self.generate_outward_spiral(area);
+                self.reveal_order.reverse(); // Just reverse for inward
+            }
+            SpiralDirection::ClockwiseFromCorner => {
+                self.generate_corner_spiral(area);
+            }
+        }
+        
+        self.initialized = true;
+    }
+
+    pub fn update(&mut self, elapsed: Duration) {
+        self.elapsed_ms = (self.elapsed_ms + elapsed.as_millis() as u64)
+            .min(self.duration_ms);
+    }
+
+    pub fn apply(&mut self, buffer: &mut ratatui::buffer::Buffer, area: Rect) {
+        // Initialize on first frame
+        self.init_reveal_order(area);
+        
+        if self.reveal_order.is_empty() {
+            return;
+        }
+
+        // Calculate progress
+        let progress = self.elapsed_ms as f32 / self.duration_ms as f32;
+        let cells_to_reveal = (self.reveal_order.len() as f32 * progress) as usize;
+
+        // Create a set of revealed positions for fast lookup
+        let revealed: std::collections::HashSet<(u16, u16)> = 
+            self.reveal_order.iter().take(cells_to_reveal).copied().collect();
+
+        // Hide all cells that haven't been revealed
+        for y in area.top()..area.bottom() {
+            for x in area.left()..area.right() {
+                if !revealed.contains(&(x, y)) {
+                    if let Some(cell) = buffer.cell_mut((x, y)) {
+                        cell.set_char(' ');
+                    }
+                }
+            }
+        }
+    }
+
+    /// Check if effect is complete
+    pub fn is_complete(&self) -> bool {
+        self.elapsed_ms >= self.duration_ms
+    }
+}
+
+pub struct IntroModel {
+    last_frame: Instant,
+    total_elapsed_ms: u128,
+    total_elapsed: Duration,
+    effect: patterns::WaveReveal,
+    effect_0: patterns::DiamondReveal,
+    effect_1: patterns::DiamondReveal,
+    effect_2: patterns::DiamondReveal,
+    effect_3: patterns::DiamondReveal,
+    effect_4: patterns::DiamondReveal,
+    effect_5: patterns::DiamondReveal,
+    effect_6: patterns::DiamondReveal,
+    effect_7: patterns::DiamondReveal,
+}
+
+impl IntroModel {
+    pub fn new() -> Self {
+        // You can change the direction here:
+        // - SpiralDirection::OutwardFromCenter (expanding spiral)
+        // - SpiralDirection::InwardToCenter (contracting spiral)  
+        // - SpiralDirection::ClockwiseFromCorner (rectangular peel)
+        Self {
+            last_frame: Instant::now(),
+            total_elapsed: Duration::from_millis(0),
+            total_elapsed_ms: 0,
+            effect: patterns::WaveReveal::new(2377),
+            effect_0: patterns::DiamondReveal::new(233),
+            effect_1: patterns::DiamondReveal::new(377),
+            effect_2: patterns::DiamondReveal::new(610),
+            effect_3: patterns::DiamondReveal::new(987),
+            effect_4: patterns::DiamondReveal::new(1597),
+            effect_5: patterns::DiamondReveal::new(2584),
+            effect_6: patterns::DiamondReveal::new(4181),
+            effect_7: patterns::DiamondReveal::new(6765),
+        }
+    }
+
+    pub fn update(&mut self, _msg: crate::app::Msg) {
+        // Update logic if needed
+    }
+
+    pub fn view(&mut self, f: &mut Frame, area: Rect) {
+        let elapsed = self.last_frame.elapsed();
+        self.last_frame = Instant::now();
+        self.total_elapsed_ms += elapsed.as_millis();
+        self.total_elapsed += elapsed;
+
+        // Render the ASCII art
+        let p = Paragraph::new(INTRO_ASCII)
+            .alignment(Alignment::Center);
+        f.render_widget(p, area);
+
+        // Update and apply the spiral effect
+
+
+        self.effect_7.update(self.total_elapsed);
+        self.effect_7.apply(f.buffer_mut(), area);
+        if self.total_elapsed_ms > 1000 {
+            // Render the ASCII art
+            let p = Paragraph::new(INTRO_ASCII)
+                .alignment(Alignment::Center);
+            f.render_widget(p, area);
+            self.effect_6.update(elapsed);
+            self.effect_6.apply(f.buffer_mut(), area);
+        }
+
+        if self.total_elapsed_ms > 2000 {
+            // Render the ASCII art
+            let p = Paragraph::new(INTRO_ASCII)
+                .alignment(Alignment::Center);
+            f.render_widget(p, area);
+            self.effect_5.update(elapsed);
+            self.effect_5.apply(f.buffer_mut(), area);
+        }
+
+        if self.total_elapsed_ms > 3000 {
+            // Render the ASCII art
+            let p = Paragraph::new(INTRO_ASCII)
+                .alignment(Alignment::Center);
+            f.render_widget(p, area);
+            self.effect_7.update(elapsed);
+            self.effect_7.apply(f.buffer_mut(), area);
+        }
+
+        if self.total_elapsed_ms > 4000 {
+            // Render the ASCII art
+            let p = Paragraph::new(INTRO_ASCII)
+                .alignment(Alignment::Center);
+            f.render_widget(p, area);
+            self.effect_6.update(elapsed);
+            self.effect_6.apply(f.buffer_mut(), area);
+        }
+
+        if self.total_elapsed_ms > 5000 {
+            // Render the ASCII art
+            let p = Paragraph::new(INTRO_ASCII)
+                .alignment(Alignment::Center);
+            f.render_widget(p, area);
+            self.effect_5.update(elapsed);
+            self.effect_5.apply(f.buffer_mut(), area);
+        }
+
+        if self.total_elapsed_ms >  6000 {
+            self.effect_7.update(elapsed);
+            self.effect_7.apply(f.buffer_mut(), area);
+            // Render the ASCII art
+            let p = Paragraph::new(INTRO_ASCII)
+                .alignment(Alignment::Center);
+            f.render_widget(p, area);
+        }
+
+    }
+}
+
+// Alternative: Diamond/Square spiral pattern
+pub mod patterns {
+    use super::*;
+
+    /// Creates a diamond/square expanding pattern
+    pub struct DiamondReveal {
+        duration_ms: u64,
+        elapsed_ms: u64,
+        reversed: bool,
+    }
+
+    impl DiamondReveal {
+        pub fn new(duration_ms: u64) -> Self {
+            Self {
+                duration_ms,
+                elapsed_ms: 0,
+                reversed: false,
+            }
+        }
+
+        pub fn update(&mut self, elapsed: Duration) {
+            //if self.elapsed_ms >= self.duration_ms {self.reversed = true}
+            if self.reversed {
+                self.elapsed_ms = self.elapsed_ms.saturating_sub(elapsed.as_millis() as u64);
+            } else { 
+                self.elapsed_ms = (self.elapsed_ms + elapsed.as_millis() as u64)
+                    .min(self.duration_ms);
+            }
+        }
+
+        pub fn apply(&self, buffer: &mut ratatui::buffer::Buffer, area: Rect) {
+            let progress = self.elapsed_ms as f32 / self.duration_ms as f32;
+
+            let center_x = area.left() + area.width / 2;
+            let center_y = area.top() + area.height / 2;
+
+            // Calculate maximum distance from center to corners
+            let max_dist = ((area.width.pow(2) + area.height.pow(2)) as f32).sqrt() / 2.0;
+            let reveal_dist = max_dist * progress;
+
+
+            for y in area.top()..area.bottom() {
+                for x in area.left()..area.right() {
+                    // Manhattan distance for diamond shape
+                    let dist = ((x as i32 - center_x as i32).abs() 
+                        + (y as i32 - center_y as i32).abs()) as f32;
+                    // 
+                    // For circular shape, use Euclidean distance instead:
+                    let dist_euclid = (((x as i32 - center_x as i32).pow(2) 
+                            + (y as i32 - center_y as i32).pow(2)) as f32).sqrt();
+
+                    if dist > reveal_dist {
+                        if let Some(cell) = buffer.cell_mut((x, y)) {
+                            cell.set_char('◇');
+                        }
+                    }
+                    let wave_offset = (dist as f32 * 0.3).sin() * 5.0;
+                    if wave_offset > reveal_dist {
+                        if let Some(cell) = buffer.cell_mut((x, y)) {
+                            cell.set_char('◈');
+                        }
+                    }
+                }
+            }           
+            for y in area.top()..area.bottom() {
+                for x in area.left()..area.right() {
+                    let dist_euclid = (((x as i32 - center_x as i32).pow(2) 
+                            + (y as i32 - center_y as i32).pow(2)) as f32).sqrt();
+
+                    let wave_offset = (dist_euclid as f32 * 0.3).sin() * 7.7;
+                    if wave_offset < reveal_dist {
+                        if let Some(cell) = buffer.cell_mut((x, y)) {
+                            cell.set_char(' ');
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Wave reveal from left to right with sine wave distortion
+    pub struct WaveReveal {
+        duration_ms: u64,
+        elapsed_ms: u64,
+    }
+
+    impl WaveReveal {
+        pub fn new(duration_ms: u64) -> Self {
+            Self {
+                duration_ms,
+                elapsed_ms: 0,
+            }
+        }
+
+        pub fn update(&mut self, elapsed: Duration) {
+            self.elapsed_ms = (self.elapsed_ms + elapsed.as_millis() as u64)
+                .min(self.duration_ms);
+        }
+
+        pub fn apply(&self, buffer: &mut ratatui::buffer::Buffer, area: Rect) {
+            let progress = self.elapsed_ms as f32 / self.duration_ms as f32;
+            let reveal_x = area.left() as f32 + (area.width as f32 * progress);
+            let reveal_y = area.top() as f32 + (area.height as f32 * progress);
+
+            for y in area.top()..area.bottom() {
+                // Add sine wave offset
+                let wave_offset = (y as f32 * 0.7).sin() * reveal_x;
+                let effective_reveal_x = wave_offset;
+                //let effective_reveal_x = reveal_x + wave_offset;
+                //let effective_reveal_x = reveal_x * wave_offset;
+
+                for x in area.left()..area.right() {
+                    if x as f32 > effective_reveal_x {
+                        if let Some(cell) = buffer.cell_mut((x, y)) {
+                            cell.set_char('◈');
+                            cell.set_char('∿');
+                        }
+                    }
+                }
+            }
+
+            for x in area.left()..area.right() {
+                // Add sine wave offset
+                let wave_offset = (x as f32 * 0.3).sin() * reveal_y * 10.0;
+                //let effective_reveal_x = reveal_x + wave_offset;
+                let effective_reveal_y = reveal_y * wave_offset;
+
+                for y in area.top()..area.bottom() {
+                    if y as f32 > effective_reveal_y {
+                        if let Some(cell) = buffer.cell_mut((x, y)) {
+                            //cell.set_char('◆');
+                            cell.set_char('∿');
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+}

@@ -12,6 +12,7 @@ mod splash;
 mod blog;
 mod about;
 mod tui_helpers;
+mod web_sys_helpers;
 pub mod markdown_renderer;
 
 use displays::Displays;

@@ -31,8 +31,8 @@ changed.
 
 ```toml
 [profile.release]
-opt-level = "z"          # Optimize for size
-lto = true              # Link-time optimization
+opt-level = "z"         # Optimize for size
+lto = "fat"             # Link-time optimization
 codegen-units = 1       # Single codegen unit
 panic = "abort"         # Reduce panic handling code
 strip = true            # Strip symbols

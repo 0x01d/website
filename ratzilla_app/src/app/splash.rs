@@ -93,8 +93,8 @@ impl SplashModel {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(21),  // ASCII art + title
-                Constraint::Length(1),     // Spacer
+                Constraint::Length(27),  // ASCII art + title
+                Constraint::Length(3),     // Spacer
                 Constraint::Length(menu_height),  // Menu height
                 Constraint::Length(2),
             ])
